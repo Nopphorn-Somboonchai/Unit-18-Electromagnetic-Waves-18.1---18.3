@@ -1,11 +1,12 @@
 # ⚛️📡 Interactive Physics Learning Portal
 ### รายวิชา ฟิสิกส์ 6 (ว33206) | บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (Electromagnetic Waves: 18.1 - 18.3)
 
-[![Physics](https://img.shields.io/badge/Subject-Physics_M.6-blue.svg)](https://github.com/Nopphorn-Somboonchai)
+[![Physics](https://img.shields.io/badge/Subject-Physics_M.6-blue.svg)](https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)](#)
 
-> 🏛️ **Architecture Reference Implementation**
+> [!NOTE]
+> 🏛️ **Architecture Reference Implementation**  
 > Repository นี้ถูกออกแบบให้เป็น **Reference Implementation (โครงสร้างอ้างอิงมาตรฐาน)** สำหรับสื่อการเรียนรู้แบบโต้ตอบในระบบนิเวศการศึกษาวิชาฟิสิกส์ โดยใช้ **บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (หัวข้อ 18.1 - 18.3)** เป็นหัวข้อตั้งต้น เพื่อเป็นต้นแบบเชิงสถาปัตยกรรมซอฟต์แวร์ (Architectural Blueprint) สำหรับการพัฒนา Repository ในหัวข้อการเรียนรู้อื่นๆ ในอนาคต
 
 ---
@@ -14,13 +15,13 @@
 
 - [📖 Project Overview \& Learning Objectives](#-project-overview--learning-objectives)
 - [🎯 Design Philosophy](#-design-philosophy)
-- [🏗️ System Architecture](#️-system-architecture)
+- [🏗️ System Architecture](#-system-architecture)
 - [🧩 Separation of Concerns](#-separation-of-concerns)
 - [📁 Project Structure \& Folder Responsibilities](#-project-structure--folder-responsibilities)
 - [🔄 Simulator Lifecycle](#-simulator-lifecycle)
 - [✨ Features \& Interactive Modules](#-features--interactive-modules)
-- [⚙️ Dynamic Quiz System Rules](#️-dynamic-quiz-system-rules)
-- [🛠️ Development Principles](#️-development-principles)
+- [⚙️ Dynamic Quiz System Rules](#-dynamic-quiz-system-rules)
+- [🛠️ Development Principles](#-development-principles)
 - [🌐 Repository Strategy \& Educational Ecosystem Roadmap](#-repository-strategy--educational-ecosystem-roadmap)
 - [💻 Tech Stack](#-tech-stack)
 - [🚀 Installation \& Usage](#-installation--usage)
@@ -32,7 +33,8 @@
 
 โปรเจกต์สื่อการสอนแบบโต้ตอบ (Interactive Web Application) ออกแบบมาเพื่อช่วยให้นักเรียนระดับชั้นมัธยมศึกษาปีที่ 6 เข้าใจทฤษฎีและปรากฏการณ์ของ **คลื่นแม่เหล็กไฟฟ้า (Electromagnetic Waves)** ในหัวข้อ **18.1 การเกิดคลื่นแม่เหล็กไฟฟ้า**, **18.2 สเปกตรัมของคลื่นแม่เหล็กไฟฟ้า**, และ **18.3 โพลาไรเซชันของคลื่นแม่เหล็กไฟฟ้า** ได้แก่ การเหนี่ยวนำข้ามระหว่างสนามไฟฟ้าและสนามแม่เหล็กตามแนวคิดของแมกซ์เวลล์ ($E \perp B \perp v$), อัตราเร็วคลื่นแม่เหล็กไฟฟ้า ($c = f\lambda = 3 \times 10^8 \text{ m/s}$), สเปกตรัมของคลื่นแม่เหล็กไฟฟ้า 7 ช่วงความถี่ (คลื่นวิทยุ, ไมโครเวฟ, อินฟราเรด, แสง, อัลตราไวโอเลต, รังสีเอกซ์, รังสีแกมมา), แสงไม่โพลาไรส์และแสงโพลาไรส์เชิงเส้น ตลอดจนกฎของมาลุส ($I = I_0 \cos^2\theta$) ผ่านการจำลองภาพเสมือนจริง (Virtual Simulation) การฝึกทำโจทย์สุ่มแปรผันตามเลขที่ และระบบสอบเก็บคะแนนแบบจับเวลา
 
-### จุดประสงค์การเรียนรู้ (Learning Objectives)
+### 🎯 จุดประสงค์การเรียนรู้ (Learning Objectives)
+
 1. **เชิงทฤษฎี**: 
    - อธิบายการเกิดคลื่นแม่เหล็กไฟฟ้าจากการเหนี่ยวนำอย่างต่อเนื่องระหว่างสนามไฟฟ้าและสนามแม่เหล็กตามแนวคิดของแมกซ์เวลล์ และลักษณะเฉพาะของคลื่นแม่เหล็กไฟฟ้า (คลื่นตามขวาง, ไม่อาศัยตัวกลาง, เฟสตรงกัน)
    - อธิบายความหมายของสเปกตรัมคลื่นแม่เหล็กไฟฟ้า สมบัติ คุณลักษณะเด่น และการนำคลื่นแม่เหล็กไฟฟ้าในช่วงความถี่ต่าง ๆ (คลื่นวิทยุ, ไมโครเวฟ, รังสีอินฟราเรด, แสง, รังสีอัลตราไวโอเลต, รังสีเอกซ์, รังสีแกมมา) ไปประยุกต์ใช้ในชีวิตประจำวัน
@@ -44,6 +46,8 @@
 3. **เชิงปฏิบัติการ**: 
    - วิเคราะห์และสังเกตทิศทางของสนามไฟฟ้า ($\vec{E}$), สนามแม่เหล็ก ($\vec{B}$), และทิศทางการเคลื่อนที่ ($\vec{v}$) ตามกฎมือขวา ผ่านเครื่องมือจำลองภาพเสมือนจริง (Virtual Simulator)
    - สำรวจพฤติกรรมและการเปลี่ยนแปลงความเข้มของแสงเมื่อผ่านแผ่นโพลารอยด์ที่ปรับทำมุมต่าง ๆ ($0^\circ - 360^\circ$)
+
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
 
 ---
 
@@ -59,13 +63,15 @@
 * **Maintainability**: ลดความซับซ้อนที่ไม่จำเป็น เพื่อให้แอปพลิเคชันสามารถดูแลรักษาในระยะยาวได้ง่าย แม้พัฒนาด้วยทีมงานขนาดเล็ก
 * **Extensibility**: สามารถเพิ่มฟีเจอร์จำลองใหม่ๆ หรือชุดโจทย์คำนวณเพิ่มเติมได้โดยไม่ต้องรื้อระบบเดิม
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 🏗️ System Architecture
 
 ระบบถูกออกแบบโดยแบ่งลำดับชั้นความรับผิดชอบ (Layered Architecture) เพื่อแยกส่วนประมวลผลทางฟิสิกส์ออกจากส่วนแสดงผลและส่วนปฏิสัมพันธ์กับผู้ใช้:
 
-```
+```text
 [ User / Student ]
         │
         ▼
@@ -96,6 +102,8 @@
 5. **Renderer Layer**: รับค่าสถานะจาก Physics Engine/Models มาวาดเป็นภาพแอนิเมชัน 2D เวกเตอร์คลื่นตามขวาง, สเปกตรัมสี และการส่องผ่านของแสงลงบน HTML5 Canvas
 6. **HTML5 Canvas**: พื้นผิวการแสดงผลปลายทางที่แสดงผลลัพธ์เชิงทัศนวิสัยแก่ผู้ใช้
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 🧩 Separation of Concerns
@@ -108,6 +116,8 @@
 * **Quiz Logic**: รับผิดชอบอัลกอริทึมการสุ่มตัวแปร (RNG), การประมวลผลคำตอบตามเลขที่ผู้เรียน ($R$), การตรวจคะแนน และการจัดรูปแบบข้อความเฉลย
 * **Learning Content**: จัดเก็บข้อมูลเชิงทฤษฎี ข้อความอธิบาย และการเรนเดอร์สมการ $\LaTeX$ ผ่าน KaTeX
 * **Simulation State**: ทำหน้าที่เป็น Single Source of Truth เก็บค่าสถานะปัจจุบันของตัวแปร เช่น ความถี่ ($f$), ความยาวคลื่น ($\lambda$), มุมโพลารอยด์ ($\theta$), ความเข้มแสง ($I$)
+
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
 
 ---
 
@@ -175,13 +185,15 @@ src/
 | **`utils`** | ฟังก์ชันส่วนกลางที่ใช้ซ้ำ เช่น อัลกอริทึมการสุ่ม, บันทึกคะแนน, เรนเดอร์ $\LaTeX$ ผ่าน KaTeX |
 | **`assets`** | จัดเก็บไฟล์ CSS สไตล์ลิ่ง, ฟอนต์, ไอคอน และสื่อสแตติก |
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 🔄 Simulator Lifecycle
 
 แบบจำลองฟิสิกส์ (Simulator) ทุกตัวในระบบนิเวศนี้จะดำเนินตามวงจรการทำงานมาตรฐาน (Standard Lifecycle) เดียวกัน ดังแสดงในแผนภาพด้านล่าง:
 
-```
+```text
     ┌─────────────────────────┐
     │     1. Initialize       │  (สร้าง Canvas Context & โหลดโมเดลคลื่น/โพลารอยด์ตั้งต้น)
     └────────────┬────────────┘
@@ -213,6 +225,8 @@ src/
                  │
                  └────────────────► [ Loop กลับไปขั้นตอนที่ 2 หรือ 3 ]
 ```
+
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
 
 ---
 
@@ -256,6 +270,8 @@ src/
 * **📊 Dashboard สรุปผล**: แสดงคะแนนรวม เวลาที่ใช้ ตารางสรุปสถานะการตอบรายข้อ และปุ่มดูเฉลยละเอียดวิธีคิดทีละขั้นตอน
 * **💾 ระบบบันทึกผลคะแนน**: บันทึกผลสอบล่าสุดเก็บไว้ใน `LocalStorage` ของเบราว์เซอร์อัตโนมัติ
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## ⚙️ Dynamic Quiz System Rules
@@ -266,6 +282,8 @@ src/
 1. **Dynamic Parameter Generation**: ระบบจะดึงเลขที่ของนักเรียน ($R \in [1, 40]$) มาคำนวณร่วมกับฐานตัวแปรที่ถูกสุ่มขึ้นมาแบบอิสระ (*Non-deterministic Random*) เพื่อสร้างค่าพารามิเตอร์ชุดใหม่สำหรับโจทย์แต่ละข้อ
 2. **On-the-fly Validation**: การประเมินคำตอบและเฉลยวิธีทำจะคำนวณแบบสดๆ (*On-the-fly*) จากเลขที่ $R$ ของผู้เข้าสอบจริง โดยไม่ใช้ค่าคงที่แบบสแตติก (*No Static Hardcoded Answers*)
 3. **Safety Constraints**: สมการเบื้องหลังได้รับการกำหนดขอบเขตค่าต่ำสุด-สูงสุดไว้อย่างรัดกุม ป้องกันไม่ให้การคำนวณร่วมกับเลขที่ $R$ เกิดค่าที่ติดลบหรือผิดหลักการทางฟิสิกส์
+
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
 
 ---
 
@@ -280,6 +298,8 @@ src/
 5. **Be Easy to Test**: ฟังก์ชันประมวลผลฟิสิกส์ต้องรับอินพุตและคืนค่าเอาต์พุตอย่างตรงไปตรงมา (Pure Functions) เพื่อรองรับ Unit Testing
 6. **Be Easy to Extend**: เพิ่มช่วงคลื่นสเปกตรัมใหม่ พารามิเตอร์มุมโพลาไรเซชัน หรืออุปกรณ์ประยุกต์ใหม่ได้โดยการปรับแก้เพียงไฟล์ Model/Config
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 🌐 Repository Strategy & Educational Ecosystem Roadmap
@@ -290,7 +310,7 @@ src/
 * **แชร์ปรัชญา แต่ไม่แชร์โค้ดที่ซับซ้อนเกินจำเป็น**: แต่ละ Repository จะยึดถือปรัชญาการออกแบบ (Design Philosophy) และสถาปัตยกรรม (Architecture Blueprint) เดียวกัน
 * **รองรับความหลากหลายทางฟิสิกส์**: หัวข้อฟิสิกส์ที่ต่างกัน เช่น *Electromagnetic Waves (คลื่นแม่เหล็กไฟฟ้า), Fluid Dynamics (พลศาสตร์ของไหล), Projectile Motion (การเคลื่อนที่แบบโปรเจกไทล์), Electricity (ไฟฟ้า)* และ *Atomic Physics (ฟิสิกส์อะตอม)* อาจใช้ Engine ภายในที่ต่างกันโดยสิ้นเชิง แต่ยังคงโครงสร้างสถาปัตยกรรมและการแยกชั้น Layer เดียวกัน
 
-```
+```text
                   [ Physics Education Ecosystem ]
                                  │
    ┌─────────────────────────────┼─────────────────────────────┐
@@ -307,6 +327,8 @@ src/
 * **Cross-Topic Ecosystem Consistency**: เพิ่มความสอดคล้องของ UI/UX และระบบเซฟคะแนน LocalStorage ให้รองรับการทำงานข้ามหัวข้อการเรียนรู้
 * **Topic Expansion**: ขยายการสร้าง Repository ไปยังบทเรียนอื่นๆ ในระดับชั้นมัธยมศึกษาอย่างเป็นระบบ
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 💻 Tech Stack
@@ -321,6 +343,8 @@ src/
 | **Lucide Icons** | ชุดไอคอนเวกเตอร์ที่ทันสมัยสำหรับใช้แสดงสัญลักษณ์ใน UI |
 | **Google Fonts** | ฟอนต์ *Prompt* และ *Sarabun* เพิ่มความสวยงาม อ่านง่าย และเป็นระเบียบ |
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 🚀 Installation & Usage
@@ -329,7 +353,7 @@ src/
 
 1. **ดาวน์โหลดหรือ Clone โครงการ**:
    ```bash
-   git clone https://github.com/Nopphorn-Somboonchai/U-18-EM-Waves.git
+   git clone https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3.git
    ```
 2. **การเปิดใช้งาน**:
    * ตรวจสอบให้มั่นใจว่าไฟล์ `index.html`, `app.js`, `style.css` อยู่ในไดเรกทอรีเดียวกัน
@@ -338,11 +362,15 @@ src/
 3. **การเชื่อมต่อเครือข่าย**:
    * สามารถใช้งานออฟไลน์ในส่วนของการจำลองและระบบสอบได้ แต่จำเป็นต้องเชื่อมต่ออินเทอร์เน็ตในการโหลดตัวอักษร Font และ CDN Libraries (Tailwind CSS, KaTeX, Lucide Icons) ในครั้งแรก
 
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
 ---
 
 ## 👨‍🏫 References & Developer Info
 
 * **เนื้อหาอ้างอิง**: หนังสือเรียนรายวิชาเพิ่มเติมวิทยาศาสตร์และเทคโนโลยี ฟิสิกส์ ชั้นมัธยมศึกษาปีที่ 6 เล่ม 6 (สสวท.) บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (หัวข้อ 18.1 - 18.3)
 * **ผู้พัฒนา**: นายนพพร สมบูรณ์ชัย (โรงเรียนห้องสอนศึกษา ในพระอุปถัมภ์ฯ)
-* **รายวิชา**: ฟิสิกส์ 6 (รหัสวิชา ว33206)#   U n i t - 1 8 - E l e c t r o m a g n e t i c - W a v e s - 1 8 . 1 - - - 1 8 . 3  
- 
+* **รายวิชา**: ฟิสิกส์ 6 (รหัสวิชา ว33206)
+* **Repository**: [Unit-18-Electromagnetic-Waves-18.1---18.3](https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3)
+
+[🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
