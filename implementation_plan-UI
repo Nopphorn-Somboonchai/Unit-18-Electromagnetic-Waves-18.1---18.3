@@ -1,0 +1,100 @@
+# 📡 Implementation Plan: Unit 18 — คลื่นแม่เหล็กไฟฟ้า (18.1 - 18.3)
+
+## บริบทและเป้าหมาย (Context & Objectives)
+
+สร้าง **Interactive Physics Learning Portal** สำหรับบทเรียนเรื่อง **คลื่นแม่เหล็กไฟฟ้า (บทที่ 18: 18.1 - 18.3)** ประกอบด้วย 3 สิมูเลเตอร์โต้ตอบ (Simulators), ระบบแบบฝึกหัดสุ่มตามเลขที่ (Roll-Number RNG), และระบบสอบจับเวลา 15 นาที โดยแบ่งการดำเนินงานเป็น **6 เฟส (Phases)** เพื่อความแม่นยำและตรวจสอบง่าย
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **การแบ่งเฟสการพัฒนา (Phased Implementation)**: จะดำเนินการพัฒนาและทดสอบทีละเฟส แล้วสรุปผลให้ผู้ใช้ตรวจสอบ (Review) ก่อนจะเริ่มดำเนินการเฟสถัดไป
+
+> [!NOTE]
+> **สถาปัตยกรรม & มาตรฐาน UI**: ทุกส่วนจะถูกสร้างตามกฎใน [`.agents/AGENTS.md`](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/.agents/AGENTS.md) และโทนสีดีไซน์ [`.agents/DESIGN.md`](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/.agents/DESIGN.md) (พื้นสีครีมอุ่น `#faf9f5`, การ์ดสีครีมอ่อน `#efe9de`, การ์ดเข้ม `#181715`, ปุ่ม Coral `#cc785c`, ฟอนต์ Display Copernicus/Cormorant Garamond, ฟอนต์ Body Inter/StyreneB)
+
+---
+
+## 📌 แผนการดำเนินงานแบ่งตามเฟส (Phased Implementation Roadmap)
+
+---
+
+### 🔵 Phase 1: วางโครงสร้างพื้นฐาน และระบบดีไซน์ (Core Foundation & Setup)
+**เป้าหมาย**: สร้างโครงสร้างโปรเจกต์ Entry Point (`index.html`), จัดเตรียมไฟล์สไตล์ CSS Custom Properties (Design Tokens) ตามดีไซน์ซิสเต็ม และไฟล์ตั้งค่ากลาง
+
+- [NEW] [index.html](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/index.html): โครงสร้าง Semantic HTML5, SEO Metadata, Tab Navigation (`📖 ทบทวนบทเรียน` | `🧠 ตะลุยโจทย์` | `⏱️ สอบเก็บคะแนน`), Canvas containers สำหรับ 3 สิมูเลเตอร์
+- [NEW] [assets/styles/main.css](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/assets/styles/main.css): Design Tokens (โทนสีครีม `#faf9f5`, คอรัล `#cc785c`, พื้นผิวเข้ม `#181715`, ระยะห่าง 96px/32px, Border radius 8px/12px)
+- [NEW] [assets/styles/animations.css](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/assets/styles/animations.css): Keyframes สำหรับการเคลื่อนที่ของคลื่น, การเรืองแสงสเปกตรัม, และการหมุนแผ่นโพลารอยด์
+- [NEW] [src/shared/constants.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/shared/constants.js): ค่าคงที่ทางฟิสิกส์ ($c = 3 \times 10^8 \text{ m/s}$, $h = 6.626 \times 10^{-34} \text{ J}\cdot\text{s}$), ขอบเขตช่วงสเปกตรัม 7 ช่วง
+- [NEW] [src/shared/config.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/shared/config.js): ค่าคอนฟิกแอป (เวลาสอบ 15 นาที, ช่วงเลขที่ $R \in [1, 40]$)
+
+---
+
+### 🟢 Phase 2: โมเดลและเครื่องมือคำนวณทางฟิสิกส์ (Physics Domain Engine & Models)
+**เป้าหมาย**: สร้าง Pure Functions สำหรับคำนวณสมการฟิสิกส์ทั้งหมด โดยปราศจาก DOM/Canvas Dependency ตามหลักการ Separation of Concerns
+
+- [NEW] [src/physics/em-wave-engine.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/physics/em-wave-engine.js): สมการ $c = f\lambda$, เวกเตอร์สเกลาร์, ผลคูณไขว้ ($\vec{E} \times \vec{B} \rightarrow \vec{v}$), ความยาวสายอากาศ ($L = \lambda/2, \lambda/4$)
+- [NEW] [src/physics/spectrum-solver.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/physics/spectrum-solver.js): พลังงานโฟตอน $E = hf$, การจัดหมวดสเปกตรัม 7 ช่วง (วิทยุ ➔ รังสีแกมมา)
+- [NEW] [src/physics/polarization-solver.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/physics/polarization-solver.js): กฎของมาลุส $I = I_0 \cos^2\theta$, แสงผ่านโพลาไรเซอร์ 1 และ 2 แผ่น
+- [NEW] [src/physics/em-wave-model.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/physics/em-wave-model.js): Data model ของคลื่นแม่เหล็กไฟฟ้า
+- [NEW] [src/physics/spectrum-band-model.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/physics/spectrum-band-model.js): Data model ของ 7 สเปกตรัม
+- [NEW] [src/physics/polaroid-model.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/physics/polaroid-model.js): Data model ของแผ่นโพลารอยด์
+
+---
+
+### 🟡 Phase 3: สิมูเลเตอร์โต้ตอบ และการวาดภาพบน Canvas (Simulators & Canvas Adapters)
+**เป้าหมาย**: สร้าง 3 สิมูเลเตอร์โต้ตอบพร้อม Canvas Visualizers สวยงาม รองรับ Retina/High-DPI
+
+- [NEW] [src/adapters/canvas/canvas-renderer.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/canvas/canvas-renderer.js): Base Class สำหรับวาดเวกเตอร์, ลูกศร, แกนพิกัด High-DPI
+- [NEW] [src/adapters/canvas/wave-field-plotter.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/canvas/wave-field-plotter.js): วาดคลื่น $E$ (Warm Coral) และ $B$ (Teal) ตั้งฉากกัน 3 มิติ เคลื่อนที่ตามเวลา
+- [NEW] [src/adapters/canvas/spectrum-plotter.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/canvas/spectrum-plotter.js): วาดแถบสเปกตรัมรุ้งต่อเนื่อง พร้อม Cursor เลือกช่วงคลื่น
+- [NEW] [src/adapters/canvas/polaroid-plotter.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/canvas/polaroid-plotter.js): วาดแผ่น Polarizer/Analyzer และความเข้มแสงสว่าง-มืดตามแกนส่งผ่าน
+- [NEW] [src/application/em-wave-simulator.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/application/em-wave-simulator.js): Orchestrator สิมูเลเตอร์ 18.1
+- [NEW] [src/application/spectrum-simulator.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/application/spectrum-simulator.js): Orchestrator สิมูเลเตอร์ 18.2
+- [NEW] [src/application/polarization-simulator.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/application/polarization-simulator.js): Orchestrator สิมูเลเตอร์ 18.3
+- [NEW] [src/adapters/ui/control-panel.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/ui/control-panel.js): สไลเดอร์และปุ่มควบคุมพร้อม Real-time value badges
+- [NEW] [src/adapters/formula/katex-adapter.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/formula/katex-adapter.js): KaTeX formula rendering wrapper
+
+---
+
+### 🟠 Phase 4: ระบบตะลุยโจทย์สุ่มตามเลขที่ (Practice & Quiz System)
+**เป้าหมาย**: สร้างระบบแบบฝึกหัดสุ่มโจทย์ตามเลขที่ผู้เรียน ($R \in [1, 40]$) พร้อมเฉลยคำนวณละเอียดแบบสเต็ปบายสเต็ป KaTeX
+
+- [NEW] [src/utils/random.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/utils/random.js): อัลกอริทึม RNG สุ่มตัวเลขตามเลขที่ $R$
+- [NEW] [src/utils/format.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/utils/format.js): จัดฟอร์แมตสัญลักษณ์วิทยาศาสตร์ (เช่น $3.00 \times 10^8 \text{ m/s}$) และหน่วย SI
+- [NEW] [src/utils/validation.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/utils/validation.js): ตรวจคำตอบตัวเลขพร้อมความคลาดเคลื่อนยอมรับได้ (Tolerance)
+- [NEW] [src/application/quiz-manager.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/application/quiz-manager.js): คำนวณคำตอบถูกต้องและสร้าง LaTeX step-by-step solution
+- [NEW] [src/adapters/ui/quiz-ui.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/ui/quiz-ui.js): หน้าต่างทำโจทย์สุ่มเลือกหมวด 18.1-18.3 และแสดงผลตรวจย้อนกลับ (Feedback)
+
+---
+
+### 🔴 Phase 5: ระบบสอบจับเวลาและแดชบอร์ดสรุปผล (Timed Exam & Dashboard)
+**เป้าหมาย**: สร้างระบบสอบจับเวลา 15 นาที จำนวน 5 ข้อ (10 คะแนน) พร้อมบันทึกผลและแสดงแดชบอร์ด
+
+- [NEW] [src/application/exam-manager.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/application/exam-manager.js): State Machine จัดการเวลาสอบ (15 นาที), auto-submit, สุ่มโจทย์ผสม 1 Choice + 4 Numeric
+- [NEW] [src/adapters/ui/exam-ui.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/ui/exam-ui.js): UI หน้าสอบ, ตัวนับเวลาถอยหลัง (Timer MM:SS), และหน้าแดชบอร์ดวิเคราะห์ผลคะแนน
+- [NEW] [src/adapters/storage/local-storage.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/adapters/storage/local-storage.js): บันทึกประวัติและผลสอบลงใน LocalStorage
+
+---
+
+### 🟣 Phase 6: การเชื่อมโยงระบบ ขัดเกลา UI/UX และทดสอบความถูกต้อง (Integration & QA)
+**เป้าหมาย**: รวมทุก Module ใน `main.js`, ทดสอบการตอบสนองทุกอุปกรณ์ (Mobile/Tablet/Desktop), และตรวจสอบความถูกต้องทางฟิสิกส์
+
+- [NEW] [src/main.js](file:///h:/05-Physics/Unit%2018/Unit-18-Electromagnetic-Waves-18.1---18.3/src/main.js): Entry Point หลักที่ผูก Event และสั่งงานทุกคอมโพเนนต์
+- **UI/UX Polish**: ตรวจสอบ Accessibility, ความลื่นไหลของแอนิเมชัน, ความคมชัดของสีตามดีไซน์ซิสเต็ม
+- **Physics Verification**: ตรวจสอบสมการ $c = f\lambda$, $E = hf$, กฎของมาลุส $I = I_0 \cos^2\theta$ ทุกกรณีทดสอบ
+
+---
+
+## แผนการตรวจสอบ (Verification Plan)
+
+### การทดสอบความถูกต้องทางฟิสิกส์ (Physics Verification)
+- [x] สมการ $c = f\lambda = 3.00 \times 10^8 \text{ m/s}$ ถูกต้องทุกย่านความถี่
+- [x] กฎของมาลุส $I = I_0 \cos^2\theta$ ที่มุม $\theta = 0^\circ, 45^\circ, 90^\circ, 180^\circ, 270^\circ, 360^\circ$
+- [x] พลังงานโฟตอน $E = hf$ สัมพันธ์กับย่านคลื่นแม่เหล็กไฟฟ้าทั้ง 7 ช่วง
+
+### การทดสอบอินเทอร์เฟซ (UI & Responsive Verification)
+1. **Simulators**: ปรับสไลเดอร์แล้วเห็นกราฟเวกเตอร์, สเปกตรัม, และความสว่างเปลี่ยนแบบ Real-time
+2. **Quiz**: กรอกเลขที่ $R \in [1, 40]$ แล้วได้ตัวเลขโจทย์สุ่มที่ไม่ซ้ำกัน พร้อมเฉลย step-by-step
+3. **Exam**: ระบบนับเวลาถอยหลัง 15 นาทีทำงานแม่นยำ คำนวณคะแนนและบันทึก LocalStorage ได้ถูกต้อง

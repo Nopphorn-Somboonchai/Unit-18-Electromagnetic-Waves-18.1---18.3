@@ -13,14 +13,14 @@
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **เลือก CSS Framework**: ใน [README.md](file:///c:/Users/Lenovo/Desktop/Unit%2018/Unit%2018.1/README.md) ระบุใช้ทั้ง Tailwind CSS (`input.css`) และ Vanilla CSS (`style.css`) — แต่ [physics-learning-standard](file:///c:/Users/Lenovo/Desktop/physics-learning-standard/Coding-Standards.md) ไม่ได้กำหนดว่าต้องใช้ framework ใด คุณต้องการใช้ **Tailwind CSS** (ตาม README เดิม) หรือ **Vanilla CSS** (ตามแนวทาง web_application_development) สำหรับ Implementation นี้?
+> [!NOTE]
+> **เลือก CSS Framework (สรุปแล้ว)**: ใช้ **Tailwind CSS** (`input.css` -> `style.css` หรือ Tailwind CLI build setup) ตามที่ระบุใน README เพื่อความสะดวก สวยงาม และรวดเร็วในการพัฒนาตามที่ผู้ใช้เลือกไว้
 
-> [!IMPORTANT]
-> **KaTeX Loading Strategy**: README ระบุใช้ KaTeX ผ่าน CDN ต้องการให้ดาวน์โหลด KaTeX เป็น local dependency แทน (ใช้ได้ offline เต็มรูปแบบ) หรือคงใช้ CDN ตาม README?
+> [!NOTE]
+> **KaTeX Loading Strategy (สรุปแล้ว)**: ใช้ทางเลือก **Local Dependency** โดยดาวน์โหลด KaTeX (CSS, JS, และ Web Fonts) มาจัดเก็บในโปรเจกต์ (`vendor/katex/`) เพื่อให้สามารถแสดงผลสูตรคณิตศาสตร์แบบ Offline ได้เต็มรูปแบบตามที่ผู้ใช้เลือกไว้
 
-> [!IMPORTANT]
-> **ขอบเขตการ implement**: คุณต้องการให้ implement ทั้งหมดจนจบ (ทุกเฟส) ภายใน Chat นี้ หรือต้องการให้ implement ทีละเฟสแล้ว Review ก่อนไปเฟสถัดไป?
+> [!NOTE]
+> **ขอบเขตการ implement (สรุปแล้ว)**: ดำเนินการสร้างและพัฒนาทีละเฟส (Phased Implementation) แล้วหยุดสรุปรายงานเพื่อให้ผู้ใช้ตรวจสอบ (Review) ก่อนจะเริ่มดำเนินการเฟสถัดไป
 
 ---
 

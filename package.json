@@ -1,0 +1,31 @@
+{
+  "name": "unit-18-electromagnetic-waves-18.1---18.3",
+  "version": "1.0.0",
+  "description": "[![Physics](https://img.shields.io/badge/Subject-Physics_M.6-blue.svg)](https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3)\r [![License](https://img.shields.io/badge/License-MIT-green.svg)](#)\r [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)](#)",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i ./assets/styles/main.css -o ./assets/styles/style.css",
+    "build:js": "npx esbuild src/main.js --bundle --outfile=dist/bundle.js",
+    "build": "npm run build:css && npm run build:js",
+    "serve": "npx serve . -p 8080",
+    "dev": "npx @tailwindcss/cli -i ./assets/styles/main.css -o ./assets/styles/style.css --watch",
+    "test": "node tests/physics.test.js && node tests/quiz.test.js && node tests/exam.test.js && node tests/integration.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3/issues"
+  },
+  "homepage": "https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3#readme",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "katex": "^0.18.1",
+    "tailwindcss": "^4.3.3"
+  }
+}

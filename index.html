@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Interactive Physics Learning Portal สำหรับบทที่ 18 คลื่นแม่เหล็กไฟฟ้า (18.1 - 18.3) ม.6 - Simulator 3D, ตะลุยโจทย์สุ่ม RNG และระบบสอบจับเวลา 15 นาที" />
+  <meta name="author" content="Nopphorn Somboonchai" />
+  <title>บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (18.1 - 18.3) | Interactive Physics Portal</title>
+
+  <!-- Google Fonts: Prompt (Headings) & Sarabun (Body Text) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <!-- Local Offline KaTeX (Math LaTeX Rendering) -->
+  <link rel="stylesheet" href="./vendor/katex/katex.min.css" />
+  <script defer src="./vendor/katex/katex.min.js"></script>
+
+  <!-- Application Styles -->
+  <link rel="stylesheet" href="./assets/styles/style.css" />
+  <link rel="stylesheet" href="./assets/styles/animations.css" />
+</head>
+<body class="bg-[#0B0F17] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- ==========================================================================
+       HEADER & NAVIGATION BAR
+       ========================================================================== -->
+  <header class="sticky top-0 z-50 bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Portal Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <span class="text-xl">📡</span>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+              คลื่นแม่เหล็กไฟฟ้า 
+              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">ว33206 (ม.6)</span>
+            </h1>
+            <p class="text-xs text-slate-400">บทที่ 18 | หัวข้อ 18.1 - 18.3 (สสวท.)</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center space-x-1 sm:space-x-2" aria-label="Main Navigation">
+          <button id="nav-btn-review" class="nav-tab-btn active" data-tab="tab-review">
+            <span>📖</span>
+            <span class="hidden sm:inline">ทบทวนบทเรียน & Simulators</span>
+            <span class="sm:hidden">ทบทวน</span>
+          </button>
+
+          <button id="nav-btn-practice" class="nav-tab-btn" data-tab="tab-practice">
+            <span>🧠</span>
+            <span class="hidden sm:inline">ตะลุยโจทย์สุ่ม (RNG)</span>
+            <span class="sm:hidden">ฝึกโจทย์</span>
+          </button>
+
+          <button id="nav-btn-exam" class="nav-tab-btn" data-tab="tab-exam">
+            <span>⏱️</span>
+            <span class="hidden sm:inline">สอบเก็บคะแนน (15 นาที)</span>
+            <span class="sm:hidden">สอบ</span>
+          </button>
+        </nav>
+
+        <!-- Status / Roll Number Indicator -->
+        <div class="hidden md:flex items-center gap-3">
+          <div class="text-right">
+            <div class="text-xs text-slate-400">ผู้ใช้งาน</div>
+            <div id="header-user-status" class="text-xs font-semibold text-blue-400">เลขที่ #1</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================== -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ------------------------------------------------------------------------
+         TAB 1: REVIEW & INTERACTIVE SIMULATORS (18.1 - 18.3)
+         ------------------------------------------------------------------------ -->
+    <section id="tab-review" class="tab-content animate-fade-in space-y-8">
+
+      <!-- Section Header -->
+      <div class="bg-gradient-to-r from-blue-900/40 via-slate-900/60 to-cyan-950/40 border border-blue-500/20 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+          <span>⚛️</span> เครื่องมือจำลองภาพเสมือนจริง (Interactive Physics Simulators)
+        </h2>
+        <p class="text-slate-300 text-sm max-w-4xl leading-relaxed">
+          ทดลองปรับเปลี่ยนตัวแปรทางฟิสิกส์ใน 3 หัวข้อหลัก เพื่อสร้างความเข้าใจเชิงมิติและทฤษฎีการเกิดคลื่นแม่เหล็กไฟฟ้า สเปกตรัมความถี่ และปรากฏการณ์โพลาไรเซชัน
+        </p>
+      </div>
+
+      <!-- Sub-Tab / Topic Selector Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- Simulator 1 Card -->
+        <div class="glass-panel p-5 cursor-pointer hover:border-blue-500/40 transition-all duration-300 group" onclick="document.getElementById('sim-18-1').scrollIntoView({behavior: 'smooth'})">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">หัวข้อ 18.1</span>
+            <span class="text-xs text-slate-400">สนาม E & B</span>
+          </div>
+          <h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">18.1 การเกิดคลื่นแม่เหล็กไฟฟ้า</h3>
+          <p class="text-xs text-slate-400 mt-2 line-clamp-2">
+            การเหนี่ยวนำข้ามระหว่างสนามไฟฟ้า (<span class="text-red-400">E</span>) และสนามแม่เหล็ก (<span class="text-blue-400">B</span>) ในทิศตั้งฉากกัน (<span class="text-emerald-400">v</span>) ตามกฎมือขวา
+          </p>
+        </div>
+
+        <!-- Simulator 2 Card -->
+        <div class="glass-panel p-5 cursor-pointer hover:border-cyan-500/40 transition-all duration-300 group" onclick="document.getElementById('sim-18-2').scrollIntoView({behavior: 'smooth'})">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">หัวข้อ 18.2</span>
+            <span class="text-xs text-slate-400">7 ช่วงความถี่</span>
+          </div>
+          <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">18.2 สเปกตรัมคลื่นแม่เหล็กไฟฟ้า</h3>
+          <p class="text-xs text-slate-400 mt-2 line-clamp-2">
+            สำรวจสเปกตรัม 7 ช่วงความถี่ (วิทยุ → แกมมา) คำนวณความยาวคลื่น & พลังงานโฟตอน (<span class="font-mono">E = hf</span>)
+          </p>
+        </div>
+
+        <!-- Simulator 3 Card -->
+        <div class="glass-panel p-5 cursor-pointer hover:border-amber-500/40 transition-all duration-300 group" onclick="document.getElementById('sim-18-3').scrollIntoView({behavior: 'smooth'})">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">หัวข้อ 18.3</span>
+            <span class="text-xs text-slate-400">กฎของมาลุส</span>
+          </div>
+          <h3 class="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">18.3 โพลาไรเซชันของคลื่น</h3>
+          <p class="text-xs text-slate-400 mt-2 line-clamp-2">
+            แสงไม่โพลาไรส์ผ่านแผ่นโพลารอยด์ 2 แผ่น ปรับมุมแผ่น Analyzer และสังเกตความเข้มแสงตามกฎ <span class="font-mono">I = I₀ cos²θ</span>
+          </p>
+        </div>
+
+      </div>
+
+      <!-- --------------------------------------------------------------------
+           SIMULATOR 18.1: EM Wave Wavefield & Vector Field (3D-like Canvas)
+           -------------------------------------------------------------------- -->
+      <div id="sim-18-1" class="glass-panel p-6 space-y-6 border-l-4 border-l-blue-500">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="badge-e-field">E-Field (สีแดง)</span>
+              <span class="badge-b-field">B-Field (สีน้ำเงิน)</span>
+              <span class="badge-velocity">v Direction (สีเขียว)</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mt-2 flex items-center gap-3">
+              <span>18.1 แบบจำลองการเกิดคลื่นแม่เหล็กไฟฟ้า</span>
+              <span id="katex-formula-18-1" class="text-sm text-blue-300 font-normal"></span>
+            </h3>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="btn-toggle-wave-anim" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-colors flex items-center gap-2">
+              <span>⏸️</span> <span>เล่น / หยุดแอนิเมชัน</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-wrapper">
+          <canvas id="canvas-em-wave" width="800" height="420"></canvas>
+        </div>
+
+        <!-- Control Panel 18.1 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+          <div>
+            <label for="slider-em-freq" class="block text-xs font-semibold text-slate-300 mb-2">
+              ความถี่คลื่น ($f$): <span id="val-em-freq" class="text-blue-400 font-mono">100.00 MHz</span>
+            </label>
+            <input type="range" id="slider-em-freq" class="physics-slider" min="10" max="500" value="100" step="5" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">
+              ความยาวคลื่นที่คำนวณได้ ($\lambda = c/f$):
+            </label>
+            <div id="val-em-wavelength" class="text-sm font-bold font-mono text-emerald-400 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700">
+              3.00 m
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">
+              อัตราเร็วในสุญญากาศ ($c$):
+            </label>
+            <div class="text-sm font-bold font-mono text-cyan-400 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700">
+              3.00 × 10⁸ m/s
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- --------------------------------------------------------------------
+           SIMULATOR 18.2: EM Spectrum Band Explorer
+           -------------------------------------------------------------------- -->
+      <div id="sim-18-2" class="glass-panel p-6 space-y-6 border-l-4 border-l-cyan-500">
+        <div>
+          <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Electromagnetic Spectrum</span>
+          <h3 class="text-xl font-bold text-white mt-1 flex items-center gap-3">
+            <span>18.2 สเปกตรัมคลื่นแม่เหล็กไฟฟ้า 7 ช่วงความถี่</span>
+            <span id="katex-formula-18-2" class="text-sm text-cyan-300 font-normal"></span>
+          </h3>
+        </div>
+
+        <!-- Spectrum Plotter Canvas -->
+        <div class="canvas-wrapper">
+          <canvas id="canvas-spectrum" width="800" height="220"></canvas>
+        </div>
+
+        <!-- Spectrum Info Details Card -->
+        <div id="spectrum-info-card" class="bg-slate-900/80 p-5 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div id="spectrum-color-badge" class="w-4 h-4 rounded-full bg-blue-500"></div>
+              <h4 id="spectrum-band-name" class="text-lg font-bold text-white">คลื่นวิทยุ (Radio Waves)</h4>
+            </div>
+            <div class="space-y-1 text-xs text-slate-300">
+              <div>ช่วงความถี่: <span id="spectrum-freq-range" class="font-mono text-cyan-400">3 kHz - 3 GHz</span></div>
+              <div>ช่วงความยาวคลื่น: <span id="spectrum-wave-range" class="font-mono text-emerald-400">0.1 m - 100 km</span></div>
+              <div>พลังงานโฟตอน ($E = hf$): <span id="spectrum-energy-val" class="font-mono text-amber-400">1.24 × 10⁻¹¹ eV</span></div>
+            </div>
+          </div>
+          <div class="space-y-2 text-xs">
+            <div class="text-slate-400 font-semibold">การประยุกต์ใช้งานในชีวิตประจำวัน:</div>
+            <p id="spectrum-app-desc" class="text-slate-200 leading-relaxed bg-slate-800/50 p-2.5 rounded-lg">
+              การสื่อสาร วิทยุ AM/FM, โทรทัศน์, สื่อสารดาวเทียม
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- --------------------------------------------------------------------
+           SIMULATOR 18.3: Polarization & Malus's Law
+           -------------------------------------------------------------------- -->
+      <div id="sim-18-3" class="glass-panel p-6 space-y-6 border-l-4 border-l-amber-500">
+        <div>
+          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Polarization & Malus's Law</span>
+          <h3 class="text-xl font-bold text-white mt-1 flex items-center gap-3">
+            <span>18.3 ปรากฏการณ์โพลาไรเซชัน และกฎของมาลุส</span>
+            <span id="katex-formula-18-3" class="text-sm text-amber-300 font-normal"></span>
+          </h3>
+        </div>
+
+        <!-- Polaroid Simulator Canvas -->
+        <div class="canvas-wrapper">
+          <canvas id="canvas-polarization" width="800" height="350"></canvas>
+        </div>
+
+        <!-- Controls for Polaroid Angles -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+          <div>
+            <label for="slider-analyzer-angle" class="block text-xs font-semibold text-slate-300 mb-2">
+              มุมแผ่น Analyzer (θ): <span id="val-analyzer-angle" class="angle-display-badge">45°</span>
+            </label>
+            <input type="range" id="slider-analyzer-angle" class="physics-slider" min="0" max="360" value="45" step="1" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">
+              ความเข้มแสงหลังผ่าน P1 (I₁ = I₀ / 2):
+            </label>
+            <div class="text-sm font-bold font-mono text-slate-200 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700">
+              50.0% (0.50 I₀)
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">
+              ความเข้มแสงผ่าน P2 (I₂ = I₁ cos²θ):
+            </label>
+            <div id="val-transmitted-intensity" class="text-sm font-bold font-mono text-amber-400 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700">
+              25.0% (0.25 I₀)
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ------------------------------------------------------------------------
+         TAB 2: PRACTICE & DYNAMIC RNG QUIZ SYSTEM
+         ------------------------------------------------------------------------ -->
+    <section id="tab-practice" class="tab-content hidden animate-fade-in space-y-8">
+      <div id="quiz-system-container"></div>
+    </section>
+
+    <!-- ------------------------------------------------------------------------
+         TAB 3: TIMED EXAM & SCORE DASHBOARD (15 MINUTES)
+         ------------------------------------------------------------------------ -->
+    <section id="tab-exam" class="tab-content hidden animate-fade-in space-y-8">
+      <div id="exam-system-container"></div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       FOOTER
+       ========================================================================== -->
+  <footer class="bg-[#0B0F17] border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>© 2026 Interactive Physics Learning Ecosystem | บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (18.1 - 18.3)</p>
+      <p class="mt-1">พัฒนาตามมาตรฐาน <span class="text-slate-400">physics-learning-standard</span> & อ้างอิงหลักสูตร สสวท. ม.6</p>
+    </div>
+  </footer>
+
+  <!-- Application Main Entry Script (Bundled for Direct file:// and Web Server compatibility) -->
+  <script src="./dist/bundle.js"></script>
+</body>
+</html>

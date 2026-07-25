@@ -57,4 +57,5 @@ For detailed guidelines on specific topics, refer to the files in the `reference
 - 📐 [Formula-Display.md](references/Formula-Display.md) — Mathematical notation, KaTeX guidelines, SI units
 - ♿ [Accessibility.md](references/Accessibility.md) — Readability, contrast, keyboard navigation, cognitive clarity
 - 🤖 [AI-Agent-Rules.md](references/AI-Agent-Rules.md) — Rules for AI-assisted development and architectural preservation
+- 🎨 [DESIGN.md](../../DESIGN.md) — Comprehensive Web Design System (Color Tokens, Typography, Layouts)
 - 📜 [Decision-Records.md](references/Decision-Records.md) — Architectural Decision Records (ADR)
