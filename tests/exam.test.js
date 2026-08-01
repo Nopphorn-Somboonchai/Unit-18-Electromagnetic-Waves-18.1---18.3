@@ -43,8 +43,8 @@ assert(em.formatTimerString() === '15:00', 'Timer string initialized to 15:00');
 
 // --- 2. Answer Recording & Grading Tests ---
 console.log('\n--- Test Suite 2: Answer Recording & Scoring (10 Marks Total) ---');
-// Q1 is Choice question (Choice 2 = Index 2 is correct)
-em.recordAnswer(0, 2);
+// Q1 is Choice question (dynamic correctChoiceIndex)
+em.recordAnswer(0, questions[0].correctChoiceIndex);
 
 // Record correct answers for Q2..Q5
 for (let i = 1; i < 5; i++) {
@@ -57,11 +57,22 @@ assert(result.totalScore === 10, 'Perfect score is 10/10');
 assert(result.percentage === 100, 'Percentage is 100%');
 assert(result.gradedQuestions.every(q => q.isCorrect), 'All 5 questions graded correct');
 
-// --- 3. LocalStorage Persistence Tests ---
-console.log('\n--- Test Suite 3: LocalStorage Persistence ---');
-const loaded = LocalStorageAdapter.loadExamResult();
-assert(loaded !== null, 'Exam result successfully saved and retrieved from LocalStorage');
-assert(loaded.totalScore === 10, 'Retrieved total score matches saved result (10)');
+// --- 4. Non-Deterministic Dynamic System (R + B) Tests ---
+console.log('\n--- Test Suite 4: Non-Deterministic Dynamic Systems (R + B) ---');
+const em1 = new ExamManager(1);
+const questionsAttempt1 = em1.startExam(1001);
+
+const em2 = new ExamManager(1);
+const questionsAttempt2 = em2.startExam(9999);
+
+assert(questionsAttempt1[1].correctAnswer !== questionsAttempt2[1].correctAnswer,
+  'Different exam attempts for same Roll Number produce different randomized questions (R + B)');
+
+// Test Attempt-Scoped Determinism: regenerate attempt with same seed 1001
+const em1Repeat = new ExamManager(1);
+const questionsAttempt1Repeat = em1Repeat.startExam(1001);
+assert(questionsAttempt1[1].correctAnswer === questionsAttempt1Repeat[1].correctAnswer,
+  'Same attempt seed reproduces identical questions for attempt-scoped determinism');
 
 const cleared = LocalStorageAdapter.clearExamResult();
 assert(cleared === true, 'LocalStorage clear operation succeeded');

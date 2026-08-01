@@ -1,9 +1,9 @@
 ---
 name: physics-learning-standard
-description: Official engineering standards, architectural guidelines, folder structures, coding standards, canvas/UI guidelines, formula display standards, and AI rules for the Physics Learning ecosystem. Activate this skill whenever developing, refactoring, or planning interactive physics portals, simulators, or quiz modules.
+description: Official engineering standards, architectural guidelines, folder structures, coding standards, canvas/UI guidelines, formula display standards, and AI rules for the Physics Learning ecosystem (v1.5.0). Activate this skill whenever developing, refactoring, or planning interactive physics portals, simulators, or quiz modules.
 ---
 
-# ⚛️ Physics Learning Standard
+# ⚛️ Physics Learning Standard (v1.5.0)
 
 > **Engineering Standards & Reference Architecture for the Physics Learning Ecosystem**
 
@@ -43,19 +43,29 @@ src/
 
 ---
 
-## 📚 Detailed Standard References
+## 📚 Detailed Standard References (v1.5.0 Baseline)
 
 For detailed guidelines on specific topics, refer to the files in the `references/` directory:
 
 - 📖 [Principles.md](references/Principles.md) — Core engineering philosophy
 - 🏗️ [Architecture.md](references/Architecture.md) — Layered reference architecture & dependency rules
+- 🛡️ [Architecture-Enforcement.md](references/Architecture-Enforcement.md) — Architectural boundary enforcement & import rules
 - 📁 [Folder-Structure.md](references/Folder-Structure.md) — Standard layout rules for repository and source level
+- 🏷️ [Repository-Profiles.md](references/Repository-Profiles.md) — Tier 1/2/3 repository profiles and compliance requirements
+- 🔬 [Physics-Standards.md](references/Physics-Standards.md) — Scientific modeling, determinism, and precision guidelines
+- 🕹️ [Simulation-Standards.md](references/Simulation-Standards.md) — Interactive canvas physics simulation standards
+- 📝 [Dynamic-Quiz-System-Rules.md](references/Dynamic-Quiz-System-Rules.md) — Rules for dynamic question generators & assessment
+- 📏 [Units-and-Notation.md](references/Units-and-Notation.md) — SI unit conventions and mathematical notation
 - 💻 [Coding-Standards.md](references/Coding-Standards.md) — ES2025+ standards, module rules, pure functions
 - 🏷️ [Naming-Conventions.md](references/Naming-Conventions.md) — kebab-case for files, camelCase for vars, UPPER_SNAKE for constants
 - 🎨 [Canvas-Guidelines.md](references/Canvas-Guidelines.md) — HTML5 Canvas rendering standards & coordinate systems
 - 🖥️ [UI-Guidelines.md](references/UI-Guidelines.md) — Visual hierarchy, learning feedback, interactive controls
 - 📐 [Formula-Display.md](references/Formula-Display.md) — Mathematical notation, KaTeX guidelines, SI units
 - ♿ [Accessibility.md](references/Accessibility.md) — Readability, contrast, keyboard navigation, cognitive clarity
+- ✅ [Standard-Compliance-Checklist.md](references/Standard-Compliance-Checklist.md) — Checklist for verifying standard compliance
+- 🔄 [Validation-Workflow.md](references/Validation-Workflow.md) — Workflow for standard compliance validation
 - 🤖 [AI-Agent-Rules.md](references/AI-Agent-Rules.md) — Rules for AI-assisted development and architectural preservation
 - 🎨 [DESIGN.md](../../DESIGN.md) — Comprehensive Web Design System (Color Tokens, Typography, Layouts)
-- 📜 [Decision-Records.md](references/Decision-Records.md) — Architectural Decision Records (ADR)
+- 📜 [Decision-Records.md](references/Decision-Records.md) — Architectural Decision Records (ADR index)
+- 📜 [ADR Folder](references/adr/) — ADR records 0001-0006
+- 🛠️ [Validation Script](scripts/validate-standard.ps1) — PowerShell script for automated compliance validation

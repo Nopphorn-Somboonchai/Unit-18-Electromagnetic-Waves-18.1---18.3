@@ -87,7 +87,7 @@ assert(exam.state === EXAM_STATES.IN_PROGRESS, 'Exam state transitions to IN_PRO
 assert(examQuestions.length === 5, 'Exam paper contains 5 questions');
 
 // Simulate student completing exam
-exam.recordAnswer(0, 2); // Q1 Choice answer
+exam.recordAnswer(0, examQuestions[0].correctChoiceIndex); // Q1 Choice answer
 for (let i = 1; i < 5; i++) {
   exam.recordAnswer(i, examQuestions[i].correctAnswer);
 }
@@ -96,6 +96,14 @@ const examResult = exam.submitExam(false);
 assert(exam.state === EXAM_STATES.SUBMITTED, 'Exam state transitions to SUBMITTED');
 assert(examResult.totalScore === 10, 'Full score is 10/10 marks');
 assert(examResult.percentage === 100, 'Percentage is 100%');
+
+// Test Tab Navigator Exam Protection Lock
+import { TabNavigatorAdapter } from '../src/adapters/ui/tab-navigator.js';
+TabNavigatorAdapter.setExamInProgress(true);
+assert(TabNavigatorAdapter.isExamInProgress === true, 'TabNavigatorAdapter locks navigation during IN_PROGRESS exam');
+
+TabNavigatorAdapter.setExamInProgress(false);
+assert(TabNavigatorAdapter.isExamInProgress === false, 'TabNavigatorAdapter unlocks navigation after exam submission');
 
 const loadedRecord = LocalStorageAdapter.loadExamResult();
 assert(loadedRecord !== null && loadedRecord.totalScore === 10, 'Exam score persisted in LocalStorage');

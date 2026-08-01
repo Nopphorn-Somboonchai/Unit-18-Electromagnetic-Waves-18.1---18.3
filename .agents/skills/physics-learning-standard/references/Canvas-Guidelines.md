@@ -101,6 +101,8 @@ Animations should:
 
 Animation timing should not contain educational logic.
 
+Simulation behavior, numerical tolerance, and model assumptions should follow **Simulation-Standards.md**.
+
 ---
 
 # Performance
@@ -178,7 +180,11 @@ Avoid coupling rendering logic directly to browser-specific behavior whenever po
 
 This document complements:
 
+* **Physics-Standards.md**
+* **Simulation-Standards.md**
+* **Dynamic-Quiz-System-Rules.md**
 * **Architecture.md**
+* **Architecture-Enforcement.md**
 * **Folder-Structure.md**
 * **Coding-Standards.md**
 * **Formula-Display.md**

@@ -153,6 +153,8 @@ The reverse dependency should never occur.
 
 The Physics Domain should remain independent of implementation technologies.
 
+Detailed dependency and responsibility boundary rules are defined in **Architecture-Enforcement.md**.
+
 ---
 
 # Separation of Responsibilities
@@ -218,6 +220,7 @@ Repositories should:
 * Keep modules focused and reusable.
 * Prefer composition over duplication.
 * Document significant architectural decisions.
+* Review implementation boundaries using **Architecture-Enforcement.md**.
 
 ---
 
@@ -226,6 +229,7 @@ Repositories should:
 This document should be used together with the following standards:
 
 * **Principles.md** — Engineering philosophy
+* **Architecture-Enforcement.md** — Dependency and responsibility boundary rules
 * **Folder-Structure.md** — Repository organization
 * **Coding-Standards.md** — Coding conventions
 * **Naming-Conventions.md** — Naming rules

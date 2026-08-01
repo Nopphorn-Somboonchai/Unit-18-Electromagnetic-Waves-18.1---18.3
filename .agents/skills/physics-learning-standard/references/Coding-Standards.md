@@ -204,6 +204,8 @@ Examples include:
 - Rendering options
 - Feature flags
 
+Physics constants should follow `Physics-Standards.md` and `Units-and-Notation.md`.
+
 Centralizing configuration improves maintainability and simplifies future changes.
 
 ---
@@ -267,6 +269,11 @@ This document complements the following standards:
 
 * **Principles.md** — Engineering philosophy
 * **Architecture.md** — System architecture
+* **Architecture-Enforcement.md** — Dependency and responsibility boundary rules
+* **Physics-Standards.md** — Scientific correctness standards
+* **Units-and-Notation.md** — Unit and notation standards
+* **Simulation-Standards.md** — Simulation and numerical validation standards
+* **Dynamic-Quiz-System-Rules.md** — Dynamic quiz generation and validation rules
 * **Folder-Structure.md** — Repository organization
 * **Naming-Conventions.md** — Naming rules
 * **Canvas-Guidelines.md** — Canvas implementation

@@ -193,6 +193,8 @@ Recommended practices:
 
 Learning feedback should guide learners toward understanding rather than merely indicating correctness.
 
+Feedback for calculated physics answers should align with **Physics-Standards.md**, **Units-and-Notation.md**, **Simulation-Standards.md**, and **Dynamic-Quiz-System-Rules.md** when applicable.
+
 ---
 
 # Separation of Concerns
@@ -224,7 +226,12 @@ The Physics Domain defines learning content.
 
 This document complements:
 
+* **Physics-Standards.md**
+* **Units-and-Notation.md**
+* **Simulation-Standards.md**
+* **Dynamic-Quiz-System-Rules.md**
 * **Architecture.md**
+* **Architecture-Enforcement.md**
 * **Canvas-Guidelines.md**
 * **Formula-Display.md**
 * **Accessibility.md**

@@ -122,6 +122,8 @@ Recommended practices:
 
 Formula accessibility should complement the standards defined in `Formula-Display.md`.
 
+Formula notation and unit presentation should remain consistent with `Units-and-Notation.md`.
+
 ---
 
 # Media and Visual Content
@@ -201,6 +203,9 @@ This document complements:
 * **UI-Guidelines.md**
 * **Canvas-Guidelines.md**
 * **Formula-Display.md**
+* **Units-and-Notation.md**
+* **Simulation-Standards.md**
+* **Dynamic-Quiz-System-Rules.md**
 * **Architecture.md**
 * **Coding-Standards.md**
 

@@ -6,6 +6,7 @@
 import { ExamManager, EXAM_STATES } from '../../application/exam-manager.js';
 import { LocalStorageAdapter } from '../storage/local-storage.js';
 import { KaTeXAdapter } from '../formula/katex-adapter.js';
+import { TabNavigatorAdapter } from './tab-navigator.js';
 
 export class ExamUIAdapter {
   /**
@@ -23,7 +24,11 @@ export class ExamUIAdapter {
 
     this.examManager.onStateChangeCallback = (state, result) => {
       this.renderState(state, result);
+      TabNavigatorAdapter.setExamInProgress(state === EXAM_STATES.IN_PROGRESS);
     };
+
+    // Bind Reload & Unload Protection (F5, Ctrl+R, beforeunload)
+    this.setupReloadProtection();
 
     // Check if saved result exists in LocalStorage
     const savedResult = LocalStorageAdapter.loadExamResult();
@@ -33,6 +38,42 @@ export class ExamUIAdapter {
     } else {
       this.renderState(EXAM_STATES.IDLE);
     }
+  }
+
+  /**
+   * Setup browser reload protection (F5 / Ctrl+R / beforeunload)
+   */
+  setupReloadProtection() {
+    if (typeof window === 'undefined') return;
+
+    // Intercept keyboard reload shortcuts (F5, Ctrl+R, Cmd+R)
+    window.addEventListener('keydown', (e) => {
+      if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+        if (
+          e.key === 'F5' ||
+          (e.key === 'r' && (e.ctrlKey || e.metaKey)) ||
+          (e.key === 'R' && (e.ctrlKey || e.metaKey))
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          alert('⚠️ ไม่อนุญาตให้กดรีโหลดหน้าเว็บ (F5 / Ctrl+R) ระหว่างทำข้อสอบเก็บคะแนน!\nหากต้องการส่งข้อสอบ กรุณากดปุ่ม "ส่งข้อสอบ" ด้านล่าง');
+          return false;
+        }
+      }
+    }, true);
+
+    // Intercept browser reload / tab close / window unload
+    window.addEventListener('beforeunload', (e) => {
+      if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+        // Auto-submit current exam immediately before unloading to prevent exam reset
+        this.examManager.submitExam(true);
+
+        const warningMsg = '⚠️ คุณกำลังทำข้อสอบเก็บคะแนนอยู่ หากคุณรีโหลดหรือออกจากหน้านี้ ข้อสอบของคุณจะถูกส่งและยุติการสอบทันที!';
+        e.preventDefault();
+        e.returnValue = warningMsg;
+        return warningMsg;
+      }
+    });
   }
 
   /**

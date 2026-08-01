@@ -521,6 +521,17 @@
     }
     return v / f;
   }
+  function calculateFrequency(wavelength, speed = SPEED_OF_LIGHT) {
+    const lambda = Number(wavelength);
+    const v = Number(speed);
+    if (isNaN(lambda) || lambda <= 0) {
+      throw new Error("[EMWaveEngine] Wavelength must be a positive number");
+    }
+    if (isNaN(v) || v <= 0) {
+      throw new Error("[EMWaveEngine] Speed must be a positive number");
+    }
+    return v / lambda;
+  }
   function calculateAntennaLength(wavelength, type = "half-wave") {
     const lambda = Number(wavelength);
     if (isNaN(lambda) || lambda <= 0) {
@@ -1185,6 +1196,34 @@
 
   // src/adapters/ui/tab-navigator.js
   var TabNavigatorAdapter = class {
+    static isExamInProgress = false;
+    /**
+     * Set exam protection lock state
+     * @param {boolean} inProgress
+     */
+    static setExamInProgress(inProgress) {
+      this.isExamInProgress = !!inProgress;
+      this.updateTabLockUI();
+    }
+    /**
+     * Update visual lock styling on tab buttons
+     */
+    static updateTabLockUI() {
+      if (typeof document === "undefined") return;
+      const tabButtons = document.querySelectorAll(".nav-tab-btn");
+      tabButtons.forEach((btn) => {
+        const tabId = btn.getAttribute("data-tab");
+        if (tabId !== "tab-exam") {
+          if (this.isExamInProgress) {
+            btn.classList.add("opacity-40", "cursor-not-allowed");
+            btn.setAttribute("title", "\u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A \u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49");
+          } else {
+            btn.classList.remove("opacity-40", "cursor-not-allowed");
+            btn.removeAttribute("title");
+          }
+        }
+      });
+    }
     /**
      * Initialize Tab Navigator
      * @param {Object} simulators - Dictionary of simulators { emWaveSim, spectrumSim, polarizationSim }
@@ -1193,8 +1232,14 @@
       const tabButtons = document.querySelectorAll(".nav-tab-btn");
       const tabContents = document.querySelectorAll(".tab-content");
       tabButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", (e) => {
           const targetTabId = btn.getAttribute("data-tab");
+          if (this.isExamInProgress && targetTabId !== "tab-exam") {
+            e.preventDefault();
+            e.stopPropagation();
+            alert("\u26A0\uFE0F \u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19 (15 \u0E19\u0E32\u0E17\u0E35)!\n\u0E23\u0E30\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E44\u0E1B\u0E14\u0E39\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E2B\u0E23\u0E37\u0E2D\u0E1D\u0E36\u0E01\u0E17\u0E33\u0E42\u0E08\u0E17\u0E22\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E2D\u0E37\u0E48\u0E19\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A");
+            return;
+          }
           tabButtons.forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           tabContents.forEach((content) => {
@@ -1226,19 +1271,27 @@
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
-  function getSeededInt(rollNumber, questionIndex, min, max) {
-    const seed = rollNumber * 10007 + questionIndex * 9973 + 12345 >>> 0;
+  function getSeededInt(rollNumber, questionIndex, min, max, attemptSeed = 0) {
+    const seed = rollNumber * 10007 + questionIndex * 9973 + attemptSeed * 1013 + 12345 >>> 0;
     const rng = createSeededRNG(seed);
     return Math.floor(rng() * (max - min + 1)) + min;
   }
-  function getSeededChoice(rollNumber, questionIndex, array) {
+  function getSeededChoice(rollNumber, questionIndex, array, attemptSeed = 0) {
     if (!array || array.length === 0) return null;
-    const idx = getSeededInt(rollNumber, questionIndex, 0, array.length - 1);
+    const idx = getSeededInt(rollNumber, questionIndex, 0, array.length - 1, attemptSeed);
     return array[idx];
   }
-  function getDynamicParam(rollNumber, baseMin, baseStep, randomRange = 0, safetyBounds = {}) {
+  function getDynamicParam(rollNumber, baseMin, baseStep, randomRange = 0, safetyBounds = {}, attemptSeed = void 0) {
     const R = Math.max(1, Math.min(40, Number(rollNumber) || 1));
-    const randOffset = randomRange > 0 ? (Math.random() - 0.5) * 2 * randomRange : 0;
+    let randFloat = 0;
+    if (attemptSeed !== void 0) {
+      const seed = rollNumber * 10007 + attemptSeed * 9973 + 88888 >>> 0;
+      const rng = createSeededRNG(seed);
+      randFloat = rng();
+    } else {
+      randFloat = Math.random();
+    }
+    const randOffset = randomRange > 0 ? (randFloat - 0.5) * 2 * randomRange : 0;
     let val = baseMin + R * baseStep + randOffset;
     if (safetyBounds.min !== void 0 && val < safetyBounds.min) {
       val = safetyBounds.min;
@@ -1336,6 +1389,7 @@
       this.currentQuestionIndex = 0;
       this.currentQuestion = null;
       this.scoreHistory = [];
+      this.attemptSeed = 0;
     }
     /**
      * Set student roll number and regenerate active question set
@@ -1349,25 +1403,28 @@
      * Generate question by category (18.1, 18.2, 18.3, or random)
      * @param {number} [questionIndex=0] - Index of question
      * @param {'18.1' | '18.2' | '18.3' | 'mixed'} [category='mixed']
+     * @param {number} [customSeed=null] - Optional attempt seed for testing/reproducibility
      */
-    generateQuestion(questionIndex = 0, category = "mixed") {
+    generateQuestion(questionIndex = 0, category = "mixed", customSeed = null) {
       this.currentQuestionIndex = questionIndex;
+      this.attemptSeed = customSeed !== null ? customSeed : (Date.now() ^ Math.floor(Math.random() * 1e5)) >>> 0;
       const R = this.rollNumber;
+      const B = this.attemptSeed;
       let targetTopic = category;
       if (category === "mixed") {
         const topics = ["18.1", "18.2", "18.3"];
-        targetTopic = getSeededChoice(R, questionIndex, topics);
+        targetTopic = getSeededChoice(R, questionIndex, topics, B);
       }
       switch (targetTopic) {
         case "18.1":
-          this.currentQuestion = this._generateTopic181Question(R, questionIndex);
+          this.currentQuestion = this._generateTopic181Question(R, questionIndex, B);
           break;
         case "18.2":
-          this.currentQuestion = this._generateTopic182Question(R, questionIndex);
+          this.currentQuestion = this._generateTopic182Question(R, questionIndex, B);
           break;
         case "18.3":
         default:
-          this.currentQuestion = this._generateTopic183Question(R, questionIndex);
+          this.currentQuestion = this._generateTopic183Question(R, questionIndex, B);
           break;
       }
       return this.currentQuestion;
@@ -1376,14 +1433,14 @@
      * Topic 18.1: EM Wave speed c = fλ & Dipole Antenna Length
      * Dynamic Parameter Generation with Safety Constraints [50 MHz, 500 MHz]
      */
-    _generateTopic181Question(R, qIndex) {
-      const subType = (R + qIndex) % 2 === 0 ? 1 : 2;
+    _generateTopic181Question(R, qIndex, B) {
+      const subType = (R + qIndex + B) % 2 === 0 ? 1 : 2;
       if (subType === 1) {
-        const freqMHz = getDynamicParam(R, 80, 2.5, 3, { min: 50, max: 400, decimals: 1 });
+        const freqMHz = getDynamicParam(R, 80, 2.5, 10, { min: 50, max: 400, decimals: 1 }, B);
         const freqHz = freqMHz * 1e6;
         const correctWavelength = calculateWavelength(freqHz);
         return {
-          id: `q_18_1_${qIndex}`,
+          id: `q_18_1_${qIndex}_${B}`,
           topic: "18.1 \u0E01\u0E32\u0E23\u0E40\u0E01\u0E34\u0E14\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
           title: `\u0E01\u0E32\u0E23\u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 (\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${R})`,
           problemText: `\u0E2A\u0E16\u0E32\u0E19\u0E35\u0E27\u0E34\u0E17\u0E22\u0E38\u0E01\u0E23\u0E30\u0E08\u0E32\u0E22\u0E40\u0E2A\u0E35\u0E22\u0E07\u0E2A\u0E48\u0E07\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E14\u0E49\u0E27\u0E22\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2D\u0E32\u0E01\u0E32\u0E28 \u0E16\u0E49\u0E32\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E43\u0E19\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(c = 3.00 \\times 10^8 \\text{ m/s}\\) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(\\lambda\\)) \u0E02\u0E2D\u0E07\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E27\u0E34\u0E17\u0E22\u0E38\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
@@ -1399,12 +1456,12 @@
           ]
         };
       } else {
-        const freqMHz = getDynamicParam(R, 100, 3, 4, { min: 80, max: 500, decimals: 1 });
+        const freqMHz = getDynamicParam(R, 100, 3, 12, { min: 80, max: 500, decimals: 1 }, B);
         const freqHz = freqMHz * 1e6;
         const lambda = calculateWavelength(freqHz);
         const antennaLength = calculateAntennaLength(lambda, "half-wave");
         return {
-          id: `q_18_1_${qIndex}`,
+          id: `q_18_1_${qIndex}_${B}`,
           topic: "18.1 \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E25\u0E30\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
           title: `\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13 (\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${R})`,
           problemText: `\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2D\u0E2D\u0E01\u0E41\u0E1A\u0E1A\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E27\u0E34\u0E17\u0E22\u0E38\u0E41\u0E1A\u0E1A\u0E44\u0E14\u0E42\u0E1E\u0E25\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19 (Half-wave Dipole Antenna) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28 (\\(L = \\lambda/2\\)) \u0E17\u0E35\u0E48\u0E40\u0E2B\u0E21\u0E32\u0E30\u0E2A\u0E21\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
@@ -1424,13 +1481,13 @@
      * Topic 18.2: Spectrum & Photon Energy E = hf
      * Dynamic Parameter Generation with Safety Constraints [3.5 x 10^14, 8.0 x 10^14 Hz]
      */
-    _generateTopic182Question(R, qIndex) {
-      const freqFactor = getDynamicParam(R, 3.8, 0.08, 0.25, { min: 3.5, max: 7.8, decimals: 2 });
+    _generateTopic182Question(R, qIndex, B) {
+      const freqFactor = getDynamicParam(R, 3.8, 0.08, 0.5, { min: 3.5, max: 7.8, decimals: 2 }, B);
       const freqHz = freqFactor * 1e14;
       const energyObj = calculatePhotonEnergy(freqHz);
       const spectrumInfo = getSpectrumInfo(freqHz);
       return {
-        id: `q_18_2_${qIndex}`,
+        id: `q_18_2_${qIndex}_${B}`,
         topic: "18.2 \u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
         title: `\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 (\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${R})`,
         problemText: `\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E43\u0E19\u0E22\u0E48\u0E32\u0E19${spectrumInfo.band.nameThai} \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1F\u0E15\u0E2D\u0E19 1 \u0E2D\u0E19\u0E38\u0E20\u0E32\u0E04 (\\(E = hf\\)) \u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E2D\u0E34\u0E40\u0E25\u0E47\u0E01\u0E15\u0E23\u0E2D\u0E19\u0E42\u0E27\u0E25\u0E15\u0E4C (eV) \u0E01\u0E33\u0E2B\u0E19\u0E14\u0E43\u0E2B\u0E49 \\(h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s}\\) \u0E41\u0E25\u0E30 \\(1 \\text{ eV} = 1.602 \\times 10^{-19} \\text{ J}\\)`,
@@ -1447,16 +1504,16 @@
     }
     /**
      * Topic 18.3: Polarization & Malus's Law I = I0 * cos^2(θ)
-     * Dynamic Parameter Generation with Safety Constraints θ ∈ [10°, 80°]
+     * Dynamic Parameter Generation restricted to standard angles θ ∈ {0°, 30°, 45°, 60°, 90°}
      */
-    _generateTopic183Question(R, qIndex) {
-      const rawAngle = getDynamicParam(R, 12, 1.75, 3, { min: 10, max: 80, decimals: 0 });
-      const angleDeg = Math.round(rawAngle);
+    _generateTopic183Question(R, qIndex, B) {
+      const standardAngles = [0, 30, 45, 60, 90];
+      const angleDeg = getSeededChoice(R, qIndex, standardAngles, B);
       const initialIntensityPercent = 100;
       const I1 = calculateIntensityAfterPolarizer(initialIntensityPercent);
       const I2 = calculateMalusIntensity(I1, angleDeg);
       return {
-        id: `q_18_3_${qIndex}`,
+        id: `q_18_3_${qIndex}_${B}`,
         topic: "18.3 \u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E40\u0E0B\u0E0A\u0E31\u0E19\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
         title: `\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E15\u0E32\u0E21\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A (\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${R})`,
         problemText: `\u0E09\u0E32\u0E22\u0E25\u0E33\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 \\(I_0\\) \u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E42\u0E1E\u0E25\u0E32\u0E23\u0E2D\u0E22\u0E14\u0E4C 2 \u0E41\u0E1C\u0E48\u0E19 \u0E42\u0E14\u0E22\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E23\u0E01 (P1) \u0E27\u0E32\u0E07\u0E43\u0E19\u0E41\u0E19\u0E27\u0E15\u0E31\u0E49\u0E07 \u0E41\u0E25\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07 (P2) \u0E2B\u0E21\u0E38\u0E19\u0E17\u0E33\u0E21\u0E38\u0E21 \\(\\theta = ${angleDeg}^\\circ\\) \u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E23\u0E01 \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E23\u0E49\u0E2D\u0E22\u0E25\u0E30\u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E2D\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19 P2 (\\(I_2\\)) \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E01\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 \\(I_0\\) (\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E23\u0E49\u0E2D\u0E22\u0E25\u0E30)`,
@@ -1466,7 +1523,7 @@
         solutionSteps: [
           `**\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1 (\u0E41\u0E1C\u0E48\u0E19 P1)**: \u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E23\u0E01 \u0E08\u0E30\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E25\u0E14\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07 \\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
           `**\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2 (\u0E41\u0E1C\u0E48\u0E19 P2 \u0E15\u0E32\u0E21\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A)**: \\(I_2 = I_1 \\cos^2\\theta\\)`,
-          `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E21\u0E38\u0E21 \\(\\theta = ${angleDeg}^\\circ\\) \\(\\rightarrow \\cos(${angleDeg}^\\circ) = ${Math.cos(angleDeg * Math.PI / 180).toFixed(4)}\\)`,
+          `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E21\u0E38\u0E21\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19 \\(\\theta = ${angleDeg}^\\circ\\) \\(\\rightarrow \\cos(${angleDeg}^\\circ) = ${Math.cos(angleDeg * Math.PI / 180).toFixed(4)}\\)`,
           `\\(I_2 = 50 \\times \\cos^2(${angleDeg}^\\circ) = 50 \\times ${Math.pow(Math.cos(angleDeg * Math.PI / 180), 2).toFixed(4)} = ${I2.toFixed(2)}\\%\\)`,
           `**\u0E15\u0E2D\u0E1A**: \u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E2D\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19 P2 \u0E04\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 **${I2.toFixed(2)}%** \u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19`
         ]
@@ -1778,6 +1835,7 @@
     constructor(rollNumber = 1) {
       this.rollNumber = validateRollNumber(rollNumber);
       this.state = EXAM_STATES.IDLE;
+      this.attemptSeed = 0;
       this.durationSeconds = APP_CONFIG.examDurationSeconds;
       this.timeRemaining = this.durationSeconds;
       this.timerInterval = null;
@@ -1798,13 +1856,15 @@
     }
     /**
      * Start new 15-minute exam session
+     * @param {number} [customSeed=null] - Optional attempt seed for testing/reproducibility
      */
-    startExam() {
+    startExam(customSeed = null) {
       this.state = EXAM_STATES.IN_PROGRESS;
       this.timeRemaining = this.durationSeconds;
       this.startTime = Date.now();
       this.userAnswers = {};
       this.examResult = null;
+      this.attemptSeed = customSeed !== null ? customSeed : (Date.now() ^ Math.floor(Math.random() * 1e5)) >>> 0;
       this.questions = this._generateExamQuestions();
       this._startTimer();
       if (this.onStateChangeCallback) {
@@ -1890,6 +1950,7 @@
       });
       this.examResult = {
         rollNumber: this.rollNumber,
+        attemptSeed: this.attemptSeed,
         totalScore,
         maxScore: APP_CONFIG.examMaxScore,
         // 10
@@ -1907,85 +1968,259 @@
     }
     /**
      * Generate 5 mixed exam questions (1 Choice + 4 Numeric)
+     * Non-deterministic parameters combining Roll Number R and Attempt Seed B
      */
     _generateExamQuestions() {
       const R = this.rollNumber;
+      const B = this.attemptSeed;
+      const theoryPool = [
+        {
+          problemText: "\u0E02\u0E49\u0E2D\u0E43\u0E14\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E19\u0E35\u0E49\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 **\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07**",
+          choices: [
+            "\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E15\u0E32\u0E21\u0E02\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E19\u0E41\u0E25\u0E30\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E1A\u0E17\u0E34\u0E28\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48",
+            "\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E2A\u0E07 c",
+            "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E21\u0E27\u0E25\u0E43\u0E19\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19",
+            "\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32 E \u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01 B \u0E21\u0E35\u0E40\u0E1F\u0E2A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07"
+          ],
+          correctChoiceIndex: 2,
+          explanation: '\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49 \u0E01\u0E32\u0E23\u0E01\u0E25\u0E48\u0E32\u0E27\u0E27\u0E48\u0E32 "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07" \u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07'
+        },
+        {
+          problemText: "\u0E02\u0E49\u0E2D\u0E43\u0E14\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E08\u0E32\u0E01 **\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E21\u0E32\u0E01\u0E44\u0E1B\u0E19\u0E49\u0E2D\u0E22** \u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
+          choices: [
+            "\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E41\u0E01\u0E21\u0E21\u0E32 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E2D\u0E47\u0E01\u0E0B\u0E4C \u2192 \u0E41\u0E2A\u0E07\u0E02\u0E32\u0E27 \u2192 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38",
+            "\u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38 \u2192 \u0E44\u0E21\u0E42\u0E04\u0E23\u0E40\u0E27\u0E1F \u2192 \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2D\u0E31\u0E25\u0E15\u0E23\u0E32\u0E44\u0E27\u0E42\u0E2D\u0E40\u0E25\u0E15",
+            "\u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38 \u2192 \u0E44\u0E21\u0E42\u0E04\u0E23\u0E40\u0E27\u0E1F \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E2D\u0E47\u0E01\u0E0B\u0E4C",
+            "\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2D\u0E31\u0E25\u0E15\u0E23\u0E32\u0E44\u0E27\u0E42\u0E2D\u0E40\u0E25\u0E15 \u2192 \u0E41\u0E2A\u0E07\u0E02\u0E32\u0E27 \u2192 \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38"
+          ],
+          correctChoiceIndex: 1,
+          explanation: "\u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E21\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2A\u0E38\u0E14 \u0E16\u0E31\u0E14\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E21\u0E42\u0E04\u0E23\u0E40\u0E27\u0E1F \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u0E41\u0E25\u0E30\u0E2D\u0E31\u0E25\u0E15\u0E23\u0E32\u0E44\u0E27\u0E42\u0E2D\u0E40\u0E25\u0E15\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A"
+        },
+        {
+          problemText: "\u0E02\u0E49\u0E2D\u0E43\u0E14\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E08\u0E32\u0E01 **\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E19\u0E49\u0E2D\u0E22\u0E44\u0E1B\u0E21\u0E32\u0E01** \u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
+          choices: [
+            "\u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38 \u2192 \u0E44\u0E21\u0E42\u0E04\u0E23\u0E40\u0E27\u0E1F \u2192 \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2D\u0E31\u0E25\u0E15\u0E23\u0E32\u0E44\u0E27\u0E42\u0E2D\u0E40\u0E25\u0E15",
+            "\u0E23\u0E31\u0E07\u0E2A\u0E35\u0E41\u0E01\u0E21\u0E21\u0E32 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E2D\u0E47\u0E01\u0E0B\u0E4C \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2D\u0E31\u0E25\u0E15\u0E23\u0E32\u0E44\u0E27\u0E42\u0E2D\u0E40\u0E25\u0E15 \u2192 \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14",
+            "\u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E41\u0E2A\u0E07\u0E02\u0E32\u0E27 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E2D\u0E47\u0E01\u0E0B\u0E4C \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E41\u0E01\u0E21\u0E21\u0E32",
+            "\u0E44\u0E21\u0E42\u0E04\u0E23\u0E40\u0E27\u0E1F \u2192 \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E2D\u0E47\u0E01\u0E0B\u0E4C"
+          ],
+          correctChoiceIndex: 1,
+          explanation: "\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E19\u0E49\u0E2D\u0E22\u0E44\u0E1B\u0E21\u0E32\u0E01 (\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48\u0E2A\u0E39\u0E07\u0E44\u0E1B\u0E15\u0E48\u0E33) \u0E44\u0E14\u0E49\u0E41\u0E01\u0E48: \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E41\u0E01\u0E21\u0E21\u0E32 \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E40\u0E2D\u0E47\u0E01\u0E0B\u0E4C \u2192 \u0E23\u0E31\u0E07\u0E2A\u0E35\u0E2D\u0E31\u0E25\u0E15\u0E23\u0E32\u0E44\u0E27\u0E42\u0E2D\u0E40\u0E25\u0E15 \u2192 \u0E2D\u0E34\u0E19\u0E1F\u0E23\u0E32\u0E40\u0E23\u0E14 \u2192 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E44\u0E21\u0E42\u0E04\u0E23\u0E40\u0E27\u0E1F \u2192 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38"
+        }
+      ];
+      const selectedTheory = getSeededChoice(R, 1, theoryPool, B);
       const q1 = {
         id: "exam_q1",
         type: "choice",
         topic: "18.1 \u0E17\u0E24\u0E29\u0E0E\u0E35\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
-        title: "\u0E02\u0E49\u0E2D 1: \u0E02\u0E49\u0E2D\u0E43\u0E14\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
-        problemText: "\u0E02\u0E49\u0E2D\u0E43\u0E14\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E19\u0E35\u0E49\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 **\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07**",
-        choices: [
-          "\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E15\u0E32\u0E21\u0E02\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E19\u0E41\u0E25\u0E30\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E1A\u0E17\u0E34\u0E28\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48",
-          "\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E2A\u0E07 c",
-          "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E21\u0E27\u0E25\u0E43\u0E19\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19",
-          "\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32 E \u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01 B \u0E21\u0E35\u0E40\u0E1F\u0E2A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07"
-        ],
-        correctChoiceIndex: 2,
-        // Choice 3 is incorrect statement (EM waves don't need medium)
-        solutionSteps: [
-          '**\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22**: \u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49 \u0E01\u0E32\u0E23\u0E01\u0E25\u0E48\u0E32\u0E27\u0E27\u0E48\u0E32 "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07" \u0E08\u0E36\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07'
-        ]
+        title: "\u0E02\u0E49\u0E2D 1: \u0E17\u0E24\u0E29\u0E0E\u0E35\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
+        problemText: selectedTheory.problemText,
+        choices: selectedTheory.choices,
+        correctChoiceIndex: selectedTheory.correctChoiceIndex,
+        solutionSteps: [`**\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22**: ${selectedTheory.explanation}`]
       };
-      const freqMHz = 90 + R * 2;
-      const freqHz = freqMHz * 1e6;
-      const lambda2 = calculateWavelength(freqHz);
-      const q2 = {
-        id: "exam_q2",
-        type: "numeric",
-        topic: "18.1 \u0E01\u0E32\u0E23\u0E04\u0E33\u0E19\u0E27\u0E13\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
-        title: "\u0E02\u0E49\u0E2D 2: \u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38",
-        problemText: `\u0E40\u0E2A\u0E32\u0E2A\u0E48\u0E07\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E27\u0E34\u0E17\u0E22\u0E38\u0E2A\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(\\lambda\\)) \u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
-        unit: "m",
-        correctAnswer: Math.round(lambda2 * 100) / 100,
-        solutionSteps: [
-          `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda2.toFixed(2)} \\text{ m}\\)`
-        ]
-      };
-      const freqFactor = 5 + R * 0.05;
-      const freqHz3 = freqFactor * 1e14;
-      const energyObj = calculatePhotonEnergy(freqHz3);
-      const q3 = {
-        id: "exam_q3",
-        type: "numeric",
-        topic: "18.2 \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21",
-        title: "\u0E02\u0E49\u0E2D 3: \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E43\u0E19\u0E22\u0E48\u0E32\u0E19\u0E41\u0E2A\u0E07",
-        problemText: `\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E41\u0E2A\u0E07\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\) \u0E08\u0E07\u0E2B\u0E32\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E2D\u0E34\u0E40\u0E25\u0E47\u0E01\u0E15\u0E23\u0E2D\u0E19\u0E42\u0E27\u0E25\u0E15\u0E4C (eV) \u0E01\u0E33\u0E2B\u0E19\u0E14\u0E43\u0E2B\u0E49 \\(h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s}\\) \u0E41\u0E25\u0E30 \\(1 \\text{ eV} = 1.602 \\times 10^{-19} \\text{ J}\\)`,
-        unit: "eV",
-        correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
-        solutionSteps: [
-          `\\(E = hf = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatScientific(energyObj.joules)} \\text{ J}\\)`,
-          `\\(E_{\\text{eV}} = \\frac{${formatScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
-        ]
-      };
-      const angleDeg = Math.round((20 + R * 1.5) % 60) + 15;
-      const I1 = 50;
-      const I2 = calculateMalusIntensity(I1, angleDeg);
-      const q4 = {
-        id: "exam_q4",
-        type: "numeric",
-        topic: "18.3 \u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07",
-        title: "\u0E02\u0E49\u0E2D 4: \u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E42\u0E1E\u0E25\u0E32\u0E23\u0E2D\u0E22\u0E14\u0E4C",
-        problemText: `\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 \\(I_0 = 100\\%\\) \u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19 Polarizer P1 \u0E41\u0E25\u0E30 Analyzer P2 \u0E17\u0E33\u0E21\u0E38\u0E21 \\(\\theta = ${angleDeg}^\\circ\\) \u0E08\u0E07\u0E2B\u0E32\u0E23\u0E49\u0E2D\u0E22\u0E25\u0E30\u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E2D\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19 P2 (\\(I_2\\))`,
-        unit: "%",
-        correctAnswer: Math.round(I2 * 100) / 100,
-        solutionSteps: [
-          `\\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
-          `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 50 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
-        ]
-      };
-      const lambda5 = calculateWavelength((90 + R * 2) * 1e6);
+      const pool181 = [
+        // Variation 1: Find Wavelength λ from Frequency f
+        () => {
+          const freqMHz = getDynamicParam(R, 80, 1.5, 15, { min: 50, max: 400, decimals: 1 }, B);
+          const freqHz = freqMHz * 1e6;
+          const lambda = calculateWavelength(freqHz);
+          return {
+            id: "exam_q2",
+            type: "numeric",
+            topic: "18.1 \u0E01\u0E32\u0E23\u0E04\u0E33\u0E19\u0E27\u0E13\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
+            title: "\u0E02\u0E49\u0E2D 2: \u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E27\u0E34\u0E17\u0E22\u0E38",
+            problemText: `\u0E40\u0E2A\u0E32\u0E2A\u0E48\u0E07\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E27\u0E34\u0E17\u0E22\u0E38\u0E2A\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(\\lambda\\)) \u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
+            unit: "m",
+            correctAnswer: Math.round(lambda * 100) / 100,
+            solutionSteps: [
+              `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`
+            ]
+          };
+        },
+        // Variation 2: Find Frequency f from Wavelength λ
+        () => {
+          const lambdaM = getDynamicParam(R, 1.2, 0.05, 0.8, { min: 0.5, max: 6, decimals: 2 }, B);
+          const freqHz = calculateFrequency(lambdaM);
+          const freqMHz = freqHz / 1e6;
+          return {
+            id: "exam_q2",
+            type: "numeric",
+            topic: "18.1 \u0E01\u0E32\u0E23\u0E04\u0E33\u0E19\u0E27\u0E13\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
+            title: "\u0E02\u0E49\u0E2D 2: \u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48\u0E08\u0E32\u0E01\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
+            problemText: `\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 \\(\\lambda = ${lambdaM.toFixed(2)} \\text{ m}\\) \u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E01\u0E30\u0E40\u0E2E\u0E34\u0E23\u0E15\u0E0B\u0E4C (MHz)`,
+            unit: "MHz",
+            correctAnswer: Math.round(freqMHz * 100) / 100,
+            solutionSteps: [
+              `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${lambdaM.toFixed(2)}} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
+              `\u0E41\u0E1B\u0E25\u0E07\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E1B\u0E47\u0E19 MHz: \\(f_{\\text{MHz}} = \\frac{${formatScientific(freqHz)}}{10^6} = ${freqMHz.toFixed(2)} \\text{ MHz}\\)`
+            ]
+          };
+        },
+        // Variation 3: Half-wave Dipole Antenna Length
+        () => {
+          const freqMHz = getDynamicParam(R, 90, 2, 20, { min: 80, max: 500, decimals: 1 }, B);
+          const freqHz = freqMHz * 1e6;
+          const lambda = calculateWavelength(freqHz);
+          const antennaL = lambda / 2;
+          return {
+            id: "exam_q2",
+            type: "numeric",
+            topic: "18.1 \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19",
+            title: "\u0E02\u0E49\u0E2D 2: \u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E42\u0E1E\u0E25",
+            problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E44\u0E14\u0E42\u0E1E\u0E25\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19 (Half-wave Dipole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(L = \\lambda/2\\) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
+            unit: "m",
+            correctAnswer: Math.round(antennaL * 100) / 100,
+            solutionSteps: [
+              `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`,
+              `\\(L = \\frac{\\lambda}{2} = \\frac{${lambda.toFixed(2)}}{2} = ${antennaL.toFixed(2)} \\text{ m}\\)`
+            ]
+          };
+        }
+      ];
+      const q2Generator = getSeededChoice(R, 2, pool181, B);
+      const q2 = q2Generator();
+      const pool182 = [
+        // Variation 1: Photon Energy E (eV) from Frequency f
+        () => {
+          const freqFactor = getDynamicParam(R, 4, 0.05, 1.5, { min: 2, max: 9, decimals: 2 }, B + 1);
+          const freqHz3 = freqFactor * 1e14;
+          const energyObj = calculatePhotonEnergy(freqHz3);
+          return {
+            id: "exam_q3",
+            type: "numeric",
+            topic: "18.2 \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21",
+            title: "\u0E02\u0E49\u0E2D 3: \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E43\u0E19\u0E22\u0E48\u0E32\u0E19\u0E41\u0E2A\u0E07",
+            problemText: `\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E41\u0E2A\u0E07\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\) \u0E08\u0E07\u0E2B\u0E32\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E2D\u0E34\u0E40\u0E25\u0E47\u0E01\u0E15\u0E23\u0E2D\u0E19\u0E42\u0E27\u0E25\u0E15\u0E4C (eV) \u0E01\u0E33\u0E2B\u0E19\u0E14\u0E43\u0E2B\u0E49 \\(h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s}\\) \u0E41\u0E25\u0E30 \\(1 \\text{ eV} = 1.602 \\times 10^{-19} \\text{ J}\\)`,
+            unit: "eV",
+            correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
+            solutionSteps: [
+              `\\(E = hf = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatScientific(energyObj.joules)} \\text{ J}\\)`,
+              `\\(E_{\\text{eV}} = \\frac{${formatScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
+            ]
+          };
+        },
+        // Variation 2: Frequency f from Photon Energy E (eV)
+        () => {
+          const energyEV = getDynamicParam(R, 1.8, 0.05, 0.8, { min: 1.5, max: 4.5, decimals: 2 }, B + 1);
+          const energyJ = energyEV * 1602e-22;
+          const freqHz = energyJ / 6626e-37;
+          const freqFactor = freqHz / 1e14;
+          return {
+            id: "exam_q3",
+            type: "numeric",
+            topic: "18.2 \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21",
+            title: "\u0E02\u0E49\u0E2D 3: \u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48\u0E08\u0E32\u0E01\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19",
+            problemText: `\u0E2D\u0E19\u0E38\u0E20\u0E32\u0E04\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E21\u0E35\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19 \\(E = ${energyEV.toFixed(2)} \\text{ eV}\\) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22 \\(\\times 10^{14} \\text{ Hz}\\) (\u0E15\u0E2D\u0E1A\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E17\u0E18\u0E4C\u0E2B\u0E19\u0E49\u0E32 \\(10^{14}\\)) \u0E01\u0E33\u0E2B\u0E19\u0E14\u0E43\u0E2B\u0E49 \\(h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s}\\) \u0E41\u0E25\u0E30 \\(1 \\text{ eV} = 1.602 \\times 10^{-19} \\text{ J}\\)`,
+            unit: "x10^14 Hz",
+            correctAnswer: Math.round(freqFactor * 100) / 100,
+            solutionSteps: [
+              `\\(E_{\\text{J}} = ${energyEV.toFixed(2)} \\times 1.602 \\times 10^{-19} = ${formatScientific(energyJ)} \\text{ J}\\)`,
+              `\\(f = \\frac{E}{h} = \\frac{${formatScientific(energyJ)}}{6.626 \\times 10^{-34}} = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\)`
+            ]
+          };
+        },
+        // Variation 3: Photon Energy E (eV) from Wavelength λ (nm)
+        () => {
+          const lambdaNm = getDynamicParam(R, 420, 5, 60, { min: 400, max: 700, decimals: 0 }, B + 1);
+          const lambdaM = lambdaNm * 1e-9;
+          const freqHz = 3e8 / lambdaM;
+          const energyObj = calculatePhotonEnergy(freqHz);
+          return {
+            id: "exam_q3",
+            type: "numeric",
+            topic: "18.2 \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21",
+            title: "\u0E02\u0E49\u0E2D 3: \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E08\u0E32\u0E01\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
+            problemText: `\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E2A\u0E07\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 \\(\\lambda = ${Math.round(lambdaNm)} \\text{ nm}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E2D\u0E34\u0E40\u0E25\u0E47\u0E01\u0E15\u0E23\u0E2D\u0E19\u0E42\u0E27\u0E25\u0E15\u0E4C (eV) \u0E01\u0E33\u0E2B\u0E19\u0E14\u0E43\u0E2B\u0E49 \\(h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s}\\), \\(c = 3.00 \\times 10^8 \\text{ m/s}\\) \u0E41\u0E25\u0E30 \\(1 \\text{ eV} = 1.602 \\times 10^{-19} \\text{ J}\\)`,
+            unit: "eV",
+            correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
+            solutionSteps: [
+              `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${Math.round(lambdaNm)} \\times 10^{-9}} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
+              `\\(E_{\\text{eV}} = \\frac{hf}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
+            ]
+          };
+        }
+      ];
+      const q3Generator = getSeededChoice(R, 3, pool182, B + 1);
+      const q3 = q3Generator();
+      const pool183 = [
+        // Variation 1: Unpolarized light through P1 and P2 (% Transmitted)
+        () => {
+          const standardAngles = [0, 30, 45, 60, 90];
+          const angleDeg = getSeededChoice(R, 4, standardAngles, B + 2);
+          const I1 = 50;
+          const I2 = calculateMalusIntensity(I1, angleDeg);
+          return {
+            id: "exam_q4",
+            type: "numeric",
+            topic: "18.3 \u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07",
+            title: "\u0E02\u0E49\u0E2D 4: \u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E42\u0E1E\u0E25\u0E32\u0E23\u0E2D\u0E22\u0E14\u0E4C",
+            problemText: `\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 \\(I_0 = 100\\%\\) \u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19 Polarizer P1 \u0E41\u0E25\u0E30 Analyzer P2 \u0E17\u0E33\u0E21\u0E38\u0E21 \\(\\theta = ${angleDeg}^\\circ\\) \u0E08\u0E07\u0E2B\u0E32\u0E23\u0E49\u0E2D\u0E22\u0E25\u0E30\u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E2D\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19 P2 (\\(I_2\\))`,
+            unit: "%",
+            correctAnswer: Math.round(I2 * 100) / 100,
+            solutionSteps: [
+              `\\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
+              `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 50 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
+            ]
+          };
+        },
+        // Variation 2: Linearly Polarized light through P2 (Intensity in W/m^2)
+        () => {
+          const standardAngles = [0, 30, 45, 60, 90];
+          const angleDeg = getSeededChoice(R, 4, standardAngles, B + 2);
+          const I1 = 100;
+          const I2 = calculateMalusIntensity(I1, angleDeg);
+          return {
+            id: "exam_q4",
+            type: "numeric",
+            topic: "18.3 \u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07",
+            title: "\u0E02\u0E49\u0E2D 4: \u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E1C\u0E48\u0E32\u0E19 Analyzer",
+            problemText: `\u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E0A\u0E34\u0E07\u0E40\u0E2A\u0E49\u0E19\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21 \\(I_1 = 100 \\text{ W/m}^2\\) \u0E15\u0E01\u0E01\u0E23\u0E30\u0E17\u0E1A\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E2D\u0E19\u0E32\u0E44\u0E25\u0E40\u0E0B\u0E2D\u0E23\u0E4C P2 \u0E0B\u0E36\u0E48\u0E07\u0E17\u0E33\u0E21\u0E38\u0E21 \\(\\theta = ${angleDeg}^\\circ\\) \u0E01\u0E31\u0E1A\u0E41\u0E19\u0E27\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E0B\u0E4C \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E17\u0E30\u0E25\u0E38\u0E1C\u0E48\u0E32\u0E19 P2 (\\(I_2\\)) \u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22 \\(\\text{W/m}^2\\)`,
+            unit: "W/m^2",
+            correctAnswer: Math.round(I2 * 100) / 100,
+            solutionSteps: [
+              `\\(I_2 = I_1 \\cos^2\\theta = 100 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)} \\text{ W/m}^2\\)`
+            ]
+          };
+        },
+        // Variation 3: Initial Polarized Light I0 = 80% through P1 and P2
+        () => {
+          const standardAngles = [0, 30, 45, 60, 90];
+          const angleDeg = getSeededChoice(R, 4, standardAngles, B + 2);
+          const I0 = 80;
+          const I1 = I0 / 2;
+          const I2 = calculateMalusIntensity(I1, angleDeg);
+          return {
+            id: "exam_q4",
+            type: "numeric",
+            topic: "18.3 \u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07",
+            title: "\u0E02\u0E49\u0E2D 4: \u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 80% \u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E42\u0E1E\u0E25\u0E32\u0E23\u0E2D\u0E22\u0E14\u0E4C",
+            problemText: `\u0E25\u0E33\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 \\(I_0 = 80\\%\\) \u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E42\u0E1E\u0E25\u0E32\u0E23\u0E2D\u0E22\u0E14\u0E4C P1 \u0E41\u0E25\u0E30 P2 \u0E17\u0E33\u0E21\u0E38\u0E21 \\(\\theta = ${angleDeg}^\\circ\\) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E23\u0E49\u0E2D\u0E22\u0E25\u0E30\u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E2D\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19 P2 (\\(I_2\\))`,
+            unit: "%",
+            correctAnswer: Math.round(I2 * 100) / 100,
+            solutionSteps: [
+              `\\(I_1 = \\frac{I_0}{2} = \\frac{80}{2} = 40\\%\\)`,
+              `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 40 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
+            ]
+          };
+        }
+      ];
+      const q4Generator = getSeededChoice(R, 4, pool183, B + 2);
+      const q4 = q4Generator();
+      const freq5MHz = getDynamicParam(R, 85, 1.5, 15, { min: 50, max: 400, decimals: 1 }, B + 3);
+      const freq5Hz = freq5MHz * 1e6;
+      const lambda5 = calculateWavelength(freq5Hz);
       const antennaLen = lambda5 / 4;
       const q5 = {
         id: "exam_q5",
         type: "numeric",
         topic: "18.1 \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E04\u0E27\u0E2D\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E40\u0E27\u0E1F",
         title: "\u0E02\u0E49\u0E2D 5: \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13 1/4 \u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
-        problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E42\u0E21\u0E42\u0E19\u0E42\u0E1E\u0E25 (Quarter-wave Monopole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(1/4\\) \u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(L = \\lambda/4\\)) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48\u0E17\u0E35\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 \\(\\lambda = ${lambda5.toFixed(2)} \\text{ m}\\) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
+        problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E42\u0E21\u0E42\u0E19\u0E42\u0E1E\u0E25 (Quarter-wave Monopole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(1/4\\) \u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(L = \\lambda/4\\)) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freq5MHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
         unit: "m",
         correctAnswer: Math.round(antennaLen * 100) / 100,
         solutionSteps: [
+          `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freq5Hz)}} = ${lambda5.toFixed(2)} \\text{ m}\\)`,
           `\\(L = \\frac{\\lambda}{4} = \\frac{${lambda5.toFixed(2)}}{4} = ${antennaLen.toFixed(2)} \\text{ m}\\)`
         ]
       };
@@ -2007,7 +2242,9 @@
       };
       this.examManager.onStateChangeCallback = (state, result) => {
         this.renderState(state, result);
+        TabNavigatorAdapter.setExamInProgress(state === EXAM_STATES.IN_PROGRESS);
       };
+      this.setupReloadProtection();
       const savedResult = LocalStorageAdapter.loadExamResult();
       if (savedResult) {
         this.examManager.examResult = savedResult;
@@ -2015,6 +2252,31 @@
       } else {
         this.renderState(EXAM_STATES.IDLE);
       }
+    }
+    /**
+     * Setup browser reload protection (F5 / Ctrl+R / beforeunload)
+     */
+    setupReloadProtection() {
+      if (typeof window === "undefined") return;
+      window.addEventListener("keydown", (e) => {
+        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+          if (e.key === "F5" || e.key === "r" && (e.ctrlKey || e.metaKey) || e.key === "R" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert('\u26A0\uFE0F \u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E01\u0E14\u0E23\u0E35\u0E42\u0E2B\u0E25\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A (F5 / Ctrl+R) \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19!\n\u0E2B\u0E32\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A \u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21 "\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A" \u0E14\u0E49\u0E32\u0E19\u0E25\u0E48\u0E32\u0E07');
+            return false;
+          }
+        }
+      }, true);
+      window.addEventListener("beforeunload", (e) => {
+        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+          this.examManager.submitExam(true);
+          const warningMsg = "\u26A0\uFE0F \u0E04\u0E38\u0E13\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19\u0E2D\u0E22\u0E39\u0E48 \u0E2B\u0E32\u0E01\u0E04\u0E38\u0E13\u0E23\u0E35\u0E42\u0E2B\u0E25\u0E14\u0E2B\u0E23\u0E37\u0E2D\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49 \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E08\u0E30\u0E16\u0E39\u0E01\u0E2A\u0E48\u0E07\u0E41\u0E25\u0E30\u0E22\u0E38\u0E15\u0E34\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A\u0E17\u0E31\u0E19\u0E17\u0E35!";
+          e.preventDefault();
+          e.returnValue = warningMsg;
+          return warningMsg;
+        }
+      });
     }
     /**
      * Render view based on state machine

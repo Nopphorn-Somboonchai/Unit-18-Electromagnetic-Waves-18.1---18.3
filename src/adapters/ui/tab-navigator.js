@@ -1,9 +1,40 @@
 /**
  * @file tab-navigator.js
- * @description UI Adapter for tab navigation and simulator lifecycle management.
+ * @description UI Adapter for tab navigation, simulator lifecycle, and exam protection lock.
  */
 
 export class TabNavigatorAdapter {
+  static isExamInProgress = false;
+
+  /**
+   * Set exam protection lock state
+   * @param {boolean} inProgress
+   */
+  static setExamInProgress(inProgress) {
+    this.isExamInProgress = !!inProgress;
+    this.updateTabLockUI();
+  }
+
+  /**
+   * Update visual lock styling on tab buttons
+   */
+  static updateTabLockUI() {
+    if (typeof document === 'undefined') return;
+    const tabButtons = document.querySelectorAll('.nav-tab-btn');
+    tabButtons.forEach((btn) => {
+      const tabId = btn.getAttribute('data-tab');
+      if (tabId !== 'tab-exam') {
+        if (this.isExamInProgress) {
+          btn.classList.add('opacity-40', 'cursor-not-allowed');
+          btn.setAttribute('title', 'อยู่ระหว่างการสอบ ไม่สามารถเข้าถึงแท็บนี้ได้');
+        } else {
+          btn.classList.remove('opacity-40', 'cursor-not-allowed');
+          btn.removeAttribute('title');
+        }
+      }
+    });
+  }
+
   /**
    * Initialize Tab Navigator
    * @param {Object} simulators - Dictionary of simulators { emWaveSim, spectrumSim, polarizationSim }
@@ -13,8 +44,16 @@ export class TabNavigatorAdapter {
     const tabContents = document.querySelectorAll('.tab-content');
 
     tabButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
         const targetTabId = btn.getAttribute('data-tab');
+
+        // Block navigation if exam is currently in progress
+        if (this.isExamInProgress && targetTabId !== 'tab-exam') {
+          e.preventDefault();
+          e.stopPropagation();
+          alert('⚠️ อยู่ระหว่างการทำข้อสอบเก็บคะแนน (15 นาที)!\nระบบไม่อนุญาตให้เปลี่ยนไปดูเนื้อหาหรือฝึกทำโจทย์ในแท็บอื่นจนกว่าจะส่งข้อสอบ');
+          return;
+        }
 
         // Update button active states
         tabButtons.forEach((b) => b.classList.remove('active'));

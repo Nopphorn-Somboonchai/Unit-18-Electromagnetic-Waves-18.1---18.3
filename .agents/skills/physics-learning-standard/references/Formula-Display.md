@@ -38,6 +38,8 @@ Formula presentation should follow these principles:
 
 The representation of knowledge is more important than the rendering technology.
 
+Formula notation should follow **Units-and-Notation.md**.
+
 ---
 
 # Rendering Responsibilities
@@ -193,7 +195,11 @@ Accessibility should improve understanding without changing mathematical meaning
 
 This document complements:
 
+* **Physics-Standards.md**
+* **Units-and-Notation.md**
+* **Dynamic-Quiz-System-Rules.md**
 * **Architecture.md**
+* **Architecture-Enforcement.md**
 * **Coding-Standards.md**
 * **Canvas-Guidelines.md**
 * **UI-Guidelines.md**

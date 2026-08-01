@@ -181,6 +181,8 @@ The **Source Level** defines how the application code inside `src/` should be or
 
 Its structure reflects the Domain-Centric Architecture defined in **Architecture.md**.
 
+Dependency and responsibility boundaries are enforced by **Architecture-Enforcement.md**.
+
 ## Standard Source Layout
 
 ```text
@@ -383,6 +385,8 @@ Only create folders that are actually required.
 
 However, whenever a folder exists, it should follow the responsibilities defined in this document.
 
+Use **Repository-Profiles.md** and **Standard-Compliance-Checklist.md** to determine which folders apply to a specific repository profile.
+
 ---
 
 # Relationship to Other Standards
@@ -390,6 +394,14 @@ However, whenever a folder exists, it should follow the responsibilities defined
 This document complements the following standards:
 
 * **Architecture.md** — Defines the architectural model.
+* **Architecture-Enforcement.md** — Defines dependency and responsibility boundary rules.
+* **Repository-Profiles.md** — Defines which repository type is being organized.
+* **Standard-Compliance-Checklist.md** — Defines how folder expectations are checked.
+* **Physics-Standards.md** — Defines how physics content should be protected.
+* **Units-and-Notation.md** — Defines unit and notation expectations.
+* **Simulation-Standards.md** — Defines simulation and numerical validation expectations.
+* **Dynamic-Quiz-System-Rules.md** — Defines dynamic quiz generation and validation expectations.
+* **Validation-Workflow.md** — Defines validation workflow and automation expectations.
 * **Coding-Standards.md** — Defines coding conventions.
 * **Naming-Conventions.md** — Defines naming rules.
 * **README-Template.md** — Defines project documentation.

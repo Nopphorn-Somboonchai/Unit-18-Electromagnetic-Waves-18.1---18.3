@@ -36,6 +36,7 @@ This repository exists to:
 As projects grow, individual repositories naturally evolve in different directions. Without a centralized standard, inconsistencies begin to appear in:
 
 * Project architecture
+* Architecture enforcement
 * Folder organization
 * Coding style
 * Documentation
@@ -73,9 +74,19 @@ These standards apply to every repository within the Physics Learning ecosystem,
 physics-learning-standard/
 
 ├── README.md
+├── VERSION.md
+├── CHANGELOG.md
 ├── Principles.md
 ├── Architecture.md
+├── Architecture-Enforcement.md
 ├── Folder-Structure.md
+├── Repository-Profiles.md
+├── Standard-Compliance-Checklist.md
+├── Physics-Standards.md
+├── Units-and-Notation.md
+├── Simulation-Standards.md
+├── Dynamic-Quiz-System-Rules.md
+├── Validation-Workflow.md
 ├── README-Template.md
 ├── Coding-Standards.md
 ├── Naming-Conventions.md
@@ -85,6 +96,16 @@ physics-learning-standard/
 ├── Accessibility.md
 ├── AI-Agent-Rules.md
 ├── Decision-Records.md
+├── adr/
+│   ├── README.md
+│   ├── 0001-adopt-domain-centric-architecture.md
+│   ├── 0002-define-repository-profiles-and-compliance.md
+│   ├── 0003-define-architecture-enforcement-rules.md
+│   ├── 0004-define-physics-domain-standards.md
+│   ├── 0005-define-validation-workflow.md
+│   └── 0006-define-dynamic-quiz-system-rules.md
+├── scripts/
+│   └── validate-standard.ps1
 └── LICENSE
 ```
 
@@ -95,9 +116,19 @@ physics-learning-standard/
 | Document                  | Purpose                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
 | **README.md**             | Project overview and entry point                                   |
+| **VERSION.md**            | Current approved standard version and versioning rules             |
+| **CHANGELOG.md**          | History of approved standard changes                               |
 | **Principles.md**         | Engineering philosophy and core principles                         |
 | **Architecture.md**       | Standard software architecture                                     |
+| **Architecture-Enforcement.md** | Enforceable dependency and responsibility boundary rules     |
 | **Folder-Structure.md**   | Standard repository layout                                         |
+| **Repository-Profiles.md** | Standard repository profiles for ecosystem repositories            |
+| **Standard-Compliance-Checklist.md** | Profile-based checklist for standard compliance          |
+| **Physics-Standards.md**  | Scientific correctness standards for physics content               |
+| **Units-and-Notation.md** | Unit, symbol, and notation standards                               |
+| **Simulation-Standards.md** | Simulation, numerical validation, and dynamic question standards  |
+| **Dynamic-Quiz-System-Rules.md** | Roll-number based dynamic quiz generation and validation rules |
+| **Validation-Workflow.md** | Validation workflow, reporting expectations, and automation scope  |
 | **README-Template.md**    | Official README template for all repositories                      |
 | **Coding-Standards.md**   | JavaScript / ES2025 coding standards                               |
 | **Naming-Conventions.md** | Naming rules for files, folders, variables, classes, and functions |
@@ -107,6 +138,8 @@ physics-learning-standard/
 | **Accessibility.md**      | Accessibility requirements                                         |
 | **AI-Agent-Rules.md**     | Rules for AI-assisted development                                  |
 | **Decision-Records.md**   | Architectural Decision Records (ADR)                               |
+| **adr/**                  | Individual decision record files                                   |
+| **scripts/validate-standard.ps1** | Lightweight validation script for this standard repository |
 
 ---
 
@@ -146,8 +179,23 @@ This includes, but is not limited to:
 * Accessibility
 * Formula rendering
 * Canvas implementation
+* Physics correctness
+* Units and notation
+* Simulation validation
+* Dynamic quiz validation
+* Validation reporting
 
 Agent-generated code and documentation should comply with these standards unless a repository explicitly defines a justified exception.
+
+AI agents creating or reviewing ecosystem repositories should identify the repository profile and use **Standard-Compliance-Checklist.md** to verify applicable requirements.
+
+Repositories with source code should use **Architecture-Enforcement.md** to review dependency direction, layer responsibilities, and documented exceptions.
+
+Repositories with physics content should use **Physics-Standards.md**, **Units-and-Notation.md**, and **Simulation-Standards.md** to review scientific correctness, unit consistency, notation, numerical tolerance, and simulation behavior.
+
+Repositories with dynamic quizzes should use **Dynamic-Quiz-System-Rules.md** to review roll-number based parameter generation, non-deterministic random values, on-the-fly validation, safety constraints, tolerance, and worked solutions.
+
+Changes to this standard repository should use **Validation-Workflow.md** and run or document the result of **scripts/validate-standard.ps1** when possible.
 
 ---
 
@@ -206,7 +254,16 @@ Approval
 Documentation Update
     │
     ▼
+Decision Record Update
+    │
+    ▼
+Changelog Update
+    │
+    ▼
 Version Increment
+    │
+    ▼
+Validation
     │
     ▼
 Repository Synchronization
@@ -219,6 +276,12 @@ Repositories should periodically synchronize with the latest approved standards.
 # Versioning
 
 This repository follows **Semantic Versioning (SemVer)**.
+
+The current approved version is recorded in **VERSION.md**.
+
+Approved standard changes are recorded in **CHANGELOG.md**.
+
+Significant architectural or cross-repository decisions are recorded as individual files in **adr/**.
 
 ```text
 MAJOR.MINOR.PATCH
@@ -236,7 +299,7 @@ Clarifications, corrections, and documentation improvements.
 Example:
 
 ```text
-v1.0.0
+v1.5.0
 ```
 
 ---
@@ -251,7 +314,9 @@ Before proposing changes:
 2. Ensure the proposal aligns with the project's engineering principles.
 3. Document the rationale for the change.
 4. Update related standards if necessary.
-5. Record significant architectural decisions in **Decision-Records.md**.
+5. Record significant architectural decisions in **adr/** according to **Decision-Records.md**.
+6. Update **CHANGELOG.md** and **VERSION.md** when the change affects the approved standard version.
+7. Run or document validation according to **Validation-Workflow.md**.
 
 Consistency across the ecosystem should always take priority over individual repository preferences.
 
@@ -275,6 +340,12 @@ Engineering decisions should always serve educational quality first.
 
 # License
 
-This project is distributed under the terms described in the **LICENSE** file.
+The original documentation, standards, templates, guidelines, and governance materials in this repository are licensed under the **Creative Commons Attribution 4.0 International License (CC BY 4.0)**.
 
-Please refer to the license before using, modifying, or redistributing any part of this repository.
+This license applies only to original materials created for this repository.
+
+It does not apply to third-party educational content, textbook content, curriculum materials, problem statements, images, figures, or externally sourced materials, including materials from สสวท. or other educational publishers.
+
+Third-party materials remain the property of their respective copyright holders and must be used only under their own licenses, permissions, or applicable legal exceptions.
+
+See **LICENSE** for details.

@@ -64,7 +64,15 @@ AI-generated work should comply with:
 
 * Principles.md
 * Architecture.md
+* Architecture-Enforcement.md
 * Folder-Structure.md
+* Repository-Profiles.md
+* Standard-Compliance-Checklist.md
+* Physics-Standards.md
+* Units-and-Notation.md
+* Simulation-Standards.md
+* Dynamic-Quiz-System-Rules.md
+* Validation-Workflow.md
 * Coding-Standards.md
 * Naming-Conventions.md
 * Canvas-Guidelines.md
@@ -88,6 +96,16 @@ Do not:
 * Bypass architectural boundaries.
 
 Technology should continue to serve the Physics Domain.
+
+Use **Architecture-Enforcement.md** when deciding whether code belongs in the Physics Domain, Application Services, Adapters, Infrastructure, Shared modules, or Utilities.
+
+Use **Physics-Standards.md**, **Units-and-Notation.md**, and **Simulation-Standards.md** when creating or modifying physics explanations, formulas, constants, simulations, dynamic questions, or numerical validation.
+
+Use **Dynamic-Quiz-System-Rules.md** when creating or modifying dynamic quizzes, randomized assessments, roll-number based parameter generation, on-the-fly validation, or worked solution generation.
+
+Use **Validation-Workflow.md** when finishing changes or reviewing repository compliance.
+
+For changes to this standard repository, AI agents should run `scripts/validate-standard.ps1` when possible and report the result.
 
 ---
 

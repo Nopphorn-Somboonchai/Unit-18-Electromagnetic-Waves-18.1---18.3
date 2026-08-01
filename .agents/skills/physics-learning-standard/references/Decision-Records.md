@@ -8,6 +8,8 @@ Its purpose is to preserve the reasoning behind important decisions so that futu
 
 This document defines a lightweight decision-recording process rather than a formal governance procedure.
 
+Individual decision records are stored in the `adr/` directory.
+
 ---
 
 # Purpose
@@ -17,6 +19,32 @@ Every software project evolves over time.
 As the project grows, architectural decisions become increasingly difficult to reconstruct from code alone.
 
 Decision Records preserve the context, reasoning, and expected impact of important decisions, helping maintain consistency across repositories and reducing repeated discussions.
+
+---
+
+# Decision Record Location
+
+Decision records should be stored as individual Markdown files in `adr/`.
+
+The `adr/README.md` file acts as the index.
+
+ADR file names should use this format:
+
+```text
+NNNN-short-decision-title.md
+```
+
+Examples:
+
+```text
+0001-adopt-domain-centric-architecture.md
+0002-define-repository-profiles.md
+0003-standardize-physics-units.md
+```
+
+ADR numbers should not be reused.
+
+Historical ADRs should remain available even when superseded.
 
 ---
 
@@ -41,11 +69,11 @@ Routine implementation changes do not require Decision Records.
 Each Decision Record should follow a simple and consistent structure.
 
 ```md
-# Decision
+# Decision NNNN: Title
 
-## Title
+Status: Proposed | Accepted | Implemented | Superseded | Archived
 
-A short, descriptive title.
+Date: YYYY-MM-DD
 
 ---
 
@@ -79,6 +107,18 @@ List any affected standard documents.
 ```
 
 The template should remain concise while providing enough context for future contributors.
+
+---
+
+# Relationship to Versioning
+
+Decision Records explain why important decisions were made.
+
+`CHANGELOG.md` records what changed in each version.
+
+`VERSION.md` identifies the current approved standard version.
+
+When a decision changes repository expectations, the related version and changelog entries should be updated.
 
 ---
 

@@ -26,10 +26,11 @@ export function createSeededRNG(seed) {
  * @param {number} questionIndex - Index/ID of the question
  * @param {number} min - Minimum value
  * @param {number} max - Maximum value
+ * @param {number} [attemptSeed=0] - Session/Attempt seed B
  * @returns {number} Random integer
  */
-export function getSeededInt(rollNumber, questionIndex, min, max) {
-  const seed = (rollNumber * 10007 + questionIndex * 9973 + 12345) >>> 0;
+export function getSeededInt(rollNumber, questionIndex, min, max, attemptSeed = 0) {
+  const seed = (rollNumber * 10007 + questionIndex * 9973 + attemptSeed * 1013 + 12345) >>> 0;
   const rng = createSeededRNG(seed);
   return Math.floor(rng() * (max - min + 1)) + min;
 }
@@ -41,10 +42,11 @@ export function getSeededInt(rollNumber, questionIndex, min, max) {
  * @param {number} min - Minimum value
  * @param {number} max - Maximum value
  * @param {number} [decimals=2] - Number of decimal places
+ * @param {number} [attemptSeed=0] - Session/Attempt seed B
  * @returns {number} Random float
  */
-export function getSeededFloat(rollNumber, questionIndex, min, max, decimals = 2) {
-  const seed = (rollNumber * 10007 + questionIndex * 9973 + 54321) >>> 0;
+export function getSeededFloat(rollNumber, questionIndex, min, max, decimals = 2, attemptSeed = 0) {
+  const seed = (rollNumber * 10007 + questionIndex * 9973 + attemptSeed * 1013 + 54321) >>> 0;
   const rng = createSeededRNG(seed);
   const val = rng() * (max - min) + min;
   const factor = Math.pow(10, decimals);
@@ -57,17 +59,18 @@ export function getSeededFloat(rollNumber, questionIndex, min, max, decimals = 2
  * @param {number} rollNumber
  * @param {number} questionIndex
  * @param {T[]} array
+ * @param {number} [attemptSeed=0] - Session/Attempt seed B
  * @returns {T} Selected element
  */
-export function getSeededChoice(rollNumber, questionIndex, array) {
+export function getSeededChoice(rollNumber, questionIndex, array, attemptSeed = 0) {
   if (!array || array.length === 0) return null;
-  const idx = getSeededInt(rollNumber, questionIndex, 0, array.length - 1);
+  const idx = getSeededInt(rollNumber, questionIndex, 0, array.length - 1, attemptSeed);
   return array[idx];
 }
 
 /**
  * Dynamic Parameter Generator:
- * Combines Roll Number R (1..40) with non-deterministic random variation
+ * Combines Roll Number R (1..40) with non-deterministic random variation (attemptSeed / B)
  * and applies strict safety constraints to guarantee physically sound parameters.
  * 
  * @param {number} rollNumber - Student roll number R (1..40)
@@ -75,11 +78,22 @@ export function getSeededChoice(rollNumber, questionIndex, array) {
  * @param {number} baseStep - Multiplier for roll number R
  * @param {number} [randomRange=0] - Dynamic non-deterministic variation range
  * @param {{ min?: number, max?: number, decimals?: number }} [safetyBounds] - Strict safety constraints
+ * @param {number} [attemptSeed] - Session/Attempt seed B (if omitted, Math.random() is used)
  * @returns {number} Dynamically generated physics parameter
  */
-export function getDynamicParam(rollNumber, baseMin, baseStep, randomRange = 0, safetyBounds = {}) {
+export function getDynamicParam(rollNumber, baseMin, baseStep, randomRange = 0, safetyBounds = {}, attemptSeed = undefined) {
   const R = Math.max(1, Math.min(40, Number(rollNumber) || 1));
-  const randOffset = randomRange > 0 ? (Math.random() - 0.5) * 2 * randomRange : 0;
+  let randFloat = 0;
+
+  if (attemptSeed !== undefined) {
+    const seed = (rollNumber * 10007 + attemptSeed * 9973 + 88888) >>> 0;
+    const rng = createSeededRNG(seed);
+    randFloat = rng();
+  } else {
+    randFloat = Math.random();
+  }
+
+  const randOffset = randomRange > 0 ? (randFloat - 0.5) * 2 * randomRange : 0;
   let val = baseMin + (R * baseStep) + randOffset;
 
   // Apply Safety Constraints
