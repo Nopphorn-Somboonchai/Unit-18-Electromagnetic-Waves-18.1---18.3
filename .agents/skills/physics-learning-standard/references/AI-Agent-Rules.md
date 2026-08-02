@@ -72,6 +72,7 @@ AI-generated work should comply with:
 * Units-and-Notation.md
 * Simulation-Standards.md
 * Dynamic-Quiz-System-Rules.md
+* Timed-Exam-System-Rules.md
 * Validation-Workflow.md
 * Coding-Standards.md
 * Naming-Conventions.md
@@ -102,6 +103,8 @@ Use **Architecture-Enforcement.md** when deciding whether code belongs in the Ph
 Use **Physics-Standards.md**, **Units-and-Notation.md**, and **Simulation-Standards.md** when creating or modifying physics explanations, formulas, constants, simulations, dynamic questions, or numerical validation.
 
 Use **Dynamic-Quiz-System-Rules.md** when creating or modifying dynamic quizzes, randomized assessments, roll-number based parameter generation, on-the-fly validation, or worked solution generation.
+
+Use **Timed-Exam-System-Rules.md** when creating or modifying timed exams, scored assessments, exam start screens, learner identity fields, lock behavior, scoring, or submitted exam data.
 
 Use **Validation-Workflow.md** when finishing changes or reviewing repository compliance.
 

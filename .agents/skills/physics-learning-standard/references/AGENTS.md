@@ -22,8 +22,9 @@ Before modifying files, AI agents MUST read:
 12. Units-and-Notation.md, when formulas, variables, or units are involved
 13. Simulation-Standards.md, when simulations, dynamic questions, or numerical validation are involved
 14. Dynamic-Quiz-System-Rules.md, when dynamic quizzes, randomized assessments, or roll-number based questions are involved
-15. Validation-Workflow.md, when completing or reviewing changes
-16. The standard document related to the task
+15. Timed-Exam-System-Rules.md, when timed exams, scored assessments, exam start screens, lock behavior, or submitted exam data are involved
+16. Validation-Workflow.md, when completing or reviewing changes
+17. The standard document related to the task
 
 ## Working Rules
 
@@ -36,6 +37,7 @@ AI agents MUST:
 - Apply Units-and-Notation.md when reviewing formulas, variables, units, or constants.
 - Apply Simulation-Standards.md when reviewing simulations, dynamic questions, randomness, or numerical tolerance.
 - Apply Dynamic-Quiz-System-Rules.md when reviewing dynamic quizzes, randomized assessments, roll-number based parameter generation, or on-the-fly answer validation.
+- Apply Timed-Exam-System-Rules.md when reviewing timed exams, scored assessments, exam start screens, lock behavior, scoring, or submitted exam data.
 - Avoid unrelated refactoring.
 - Avoid changing established standards without documenting the reason.
 - Update related documentation when a standard changes.

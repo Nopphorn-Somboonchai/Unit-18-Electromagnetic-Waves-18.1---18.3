@@ -1,9 +1,9 @@
 ---
 name: physics-learning-standard
-description: Official engineering standards, architectural guidelines, folder structures, coding standards, canvas/UI guidelines, formula display standards, and AI rules for the Physics Learning ecosystem (v1.5.0). Activate this skill whenever developing, refactoring, or planning interactive physics portals, simulators, or quiz modules.
+description: Official engineering standards, architectural guidelines, folder structures, coding standards, canvas/UI guidelines, formula display standards, and AI rules for the Physics Learning ecosystem (v1.6.0). Activate this skill whenever developing, refactoring, or planning interactive physics portals, simulators, or quiz modules.
 ---
 
-# ⚛️ Physics Learning Standard (v1.5.0)
+# ⚛️ Physics Learning Standard (v1.6.0)
 
 > **Engineering Standards & Reference Architecture for the Physics Learning Ecosystem**
 
@@ -43,7 +43,7 @@ src/
 
 ---
 
-## 📚 Detailed Standard References (v1.5.0 Baseline)
+## 📚 Detailed Standard References (v1.6.0 Baseline)
 
 For detailed guidelines on specific topics, refer to the files in the `references/` directory:
 
@@ -55,6 +55,8 @@ For detailed guidelines on specific topics, refer to the files in the `reference
 - 🔬 [Physics-Standards.md](references/Physics-Standards.md) — Scientific modeling, determinism, and precision guidelines
 - 🕹️ [Simulation-Standards.md](references/Simulation-Standards.md) — Interactive canvas physics simulation standards
 - 📝 [Dynamic-Quiz-System-Rules.md](references/Dynamic-Quiz-System-Rules.md) — Rules for dynamic question generators & assessment
+- ⏱️ [Timed-Exam-System-Rules.md](references/Timed-Exam-System-Rules.md) — Rules for scored, timed exam systems & start screen patterns
+- 📐 [assessment-session.schema.json](references/schemas/assessment-session.schema.json) — Assessment session result data schema
 - 📏 [Units-and-Notation.md](references/Units-and-Notation.md) — SI unit conventions and mathematical notation
 - 💻 [Coding-Standards.md](references/Coding-Standards.md) — ES2025+ standards, module rules, pure functions
 - 🏷️ [Naming-Conventions.md](references/Naming-Conventions.md) — kebab-case for files, camelCase for vars, UPPER_SNAKE for constants
@@ -67,5 +69,6 @@ For detailed guidelines on specific topics, refer to the files in the `reference
 - 🤖 [AI-Agent-Rules.md](references/AI-Agent-Rules.md) — Rules for AI-assisted development and architectural preservation
 - 🎨 [DESIGN.md](../../DESIGN.md) — Comprehensive Web Design System (Color Tokens, Typography, Layouts)
 - 📜 [Decision-Records.md](references/Decision-Records.md) — Architectural Decision Records (ADR index)
-- 📜 [ADR Folder](references/adr/) — ADR records 0001-0006
-- 🛠️ [Validation Script](scripts/validate-standard.ps1) — PowerShell script for automated compliance validation
+- 📜 [ADR Folder](references/adr/) — ADR records 0001-0007
+- 🛠️ [Validation Script](references/scripts/validate-standard.ps1) — PowerShell script for automated compliance validation
+

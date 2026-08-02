@@ -2,7 +2,7 @@
 
 > Official README template for repositories in the Physics Learning Ecosystem.
 
-Template version: 1.5.0
+Template version: 1.6.0
 Standard source: `physics-learning-standard`
 
 ---
@@ -158,6 +158,31 @@ When a quiz uses student roll number `R`, document the allowed range, parameter-
 
 - [Assessment feature / Not applicable]
 
+## Timed Exam System
+
+If this repository includes a timed or scored exam, it MUST follow
+`Timed-Exam-System-Rules.md`.
+
+Document the exam setup below:
+
+| Field | Value |
+| :--- | :--- |
+| Exam title | [Example: Scored exam for Grade 12] |
+| Content scope | [Concepts, formulas, and applications covered] |
+| Number of questions | [Number] |
+| Points per question | [Number or scoring table] |
+| Total score | [Number] |
+| Time limit | [Minutes / Not applicable] |
+| Numerical answer rule | [Decimal places, units, and tolerance / Not applicable] |
+| Lock or auto-submit rule | [Refresh, tab switch, timeout, or Not applicable] |
+| Result storage | [Local only / exported file / backend / Not applicable] |
+
+The exam start screen SHOULD follow the start-screen pattern in
+`Timed-Exam-System-Rules.md`.
+
+Stored or exported exam session data SHOULD follow
+`schemas/assessment-session.schema.json`.
+
 ## Feedback
 
 - [Feedback feature / Not applicable]
@@ -307,6 +332,8 @@ Before release, validate that:
 - Dynamic questions calculate answers from formulas.
 - Dynamic quizzes follow `Dynamic-Quiz-System-Rules.md` when applicable.
 - Roll-number based quizzes validate `R` and keep one attempt internally consistent.
+- Timed or scored exams follow `Timed-Exam-System-Rules.md` when applicable.
+- Exam session data follows `schemas/assessment-session.schema.json` when stored or exported.
 - Numerical answers use documented tolerance when applicable.
 - Randomized values remain physically reasonable when applicable.
 - Documentation matches the actual repository.
@@ -325,6 +352,8 @@ Before release, validate that:
 - Important interactions are keyboard accessible when applicable.
 - Feedback messages are clear and respectful.
 - Formulas are readable.
+- Exam warnings are visible before the learner starts the exam.
+- Exam forms expose labels for name, class, room, and student number fields when those fields are used.
 - Motion or animation supports learning and does not distract unnecessarily.
 
 ## AI Agent Notes
@@ -339,6 +368,7 @@ AI agents working in this repository MUST:
 - Use `Units-and-Notation.md` when reviewing formulas, variables, units, or constants.
 - Use `Simulation-Standards.md` when reviewing simulations, dynamic questions, or numerical validation.
 - Use `Dynamic-Quiz-System-Rules.md` when reviewing dynamic quizzes, randomized assessments, roll-number based parameter generation, or on-the-fly answer validation.
+- Use `Timed-Exam-System-Rules.md` when reviewing timed exams, scored assessments, exam start screens, lock behavior, or submitted exam data.
 - Use `Validation-Workflow.md` when reporting validation.
 - Keep changes focused on the requested task.
 - Preserve architecture boundaries.

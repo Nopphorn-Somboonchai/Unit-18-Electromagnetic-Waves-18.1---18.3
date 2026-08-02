@@ -106,6 +106,7 @@ Expected validation focus:
 - Learning objective alignment.
 - Practice or quiz correctness.
 - Dynamic quiz behavior follows `Dynamic-Quiz-System-Rules.md` when randomized or roll-number based quizzes exist.
+- Timed or scored exam behavior follows `Timed-Exam-System-Rules.md` when exam mode exists.
 - Numerical tolerance when applicable.
 - Accessibility and readability.
 
@@ -142,6 +143,7 @@ Expected validation focus:
 - Dependencies follow `Architecture-Enforcement.md`.
 - Inputs stay within reasonable physical ranges.
 - Dynamic quiz behavior follows `Dynamic-Quiz-System-Rules.md` when randomized quiz questions are included.
+- Timed or scored assessment behavior follows `Timed-Exam-System-Rules.md` when exam mode is included.
 - Animation supports learning and does not distract unnecessarily.
 - The simulation is usable on supported screen sizes.
 
@@ -302,6 +304,7 @@ Use this document together with:
 - `Units-and-Notation.md`
 - `Simulation-Standards.md`
 - `Dynamic-Quiz-System-Rules.md`
+- `Timed-Exam-System-Rules.md`
 - `Validation-Workflow.md`
 - `Architecture-Enforcement.md`
 - `Standard-Compliance-Checklist.md`

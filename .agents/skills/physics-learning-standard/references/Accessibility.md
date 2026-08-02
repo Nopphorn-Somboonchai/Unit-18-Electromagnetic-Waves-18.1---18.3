@@ -206,6 +206,7 @@ This document complements:
 * **Units-and-Notation.md**
 * **Simulation-Standards.md**
 * **Dynamic-Quiz-System-Rules.md**
+* **Timed-Exam-System-Rules.md**
 * **Architecture.md**
 * **Coding-Standards.md**
 

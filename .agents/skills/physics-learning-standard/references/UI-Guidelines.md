@@ -195,6 +195,8 @@ Learning feedback should guide learners toward understanding rather than merely 
 
 Feedback for calculated physics answers should align with **Physics-Standards.md**, **Units-and-Notation.md**, **Simulation-Standards.md**, and **Dynamic-Quiz-System-Rules.md** when applicable.
 
+Timed or scored exam interfaces should align with **Timed-Exam-System-Rules.md** when start screens, learner identity fields, lock behavior, timers, scoring, or submitted result data are involved.
+
 ---
 
 # Separation of Concerns
@@ -230,6 +232,7 @@ This document complements:
 * **Units-and-Notation.md**
 * **Simulation-Standards.md**
 * **Dynamic-Quiz-System-Rules.md**
+* **Timed-Exam-System-Rules.md**
 * **Architecture.md**
 * **Architecture-Enforcement.md**
 * **Canvas-Guidelines.md**

@@ -12,6 +12,32 @@ Changes planned or proposed for the next version should be listed here before re
 
 ---
 
+# 1.6.0 - 2026-08-02
+
+Added timed exam system rules.
+
+## Added
+
+- `Timed-Exam-System-Rules.md` for scored and timed exam flow, start screens, identity fields, timer behavior, lock rules, scoring, and submitted result data.
+- `schemas/assessment-session.schema.json` as the shared data contract for stored or exported exam sessions.
+- ADR 0007 for the timed exam system rules decision.
+- Timed exam checks in `Standard-Compliance-Checklist.md`.
+
+## Changed
+
+- Updated README documentation to include timed exam system rules.
+- Updated README template to reference timed exam setup and assessment session data.
+- Updated AI agent guidance to apply timed exam rules when editing scored assessments, exam start screens, lock behavior, or submitted exam data.
+- Updated standard validation to require the timed exam standard, assessment schema, and ADR 0007.
+- Updated version baseline from `1.5.0` to `1.6.0`.
+
+## Governance
+
+- Timed or scored exams should document metadata, start-screen rules, learner identity, timing, locking, scoring, and result data behavior before implementation.
+- Timed exams that include dynamic or roll-number based questions must also follow `Dynamic-Quiz-System-Rules.md`.
+
+---
+
 # 1.5.0 - 2026-08-01
 
 Added dynamic quiz system rules.

@@ -105,6 +105,8 @@ It may include:
 
 Physics content in the domain should follow `Physics-Standards.md`, `Units-and-Notation.md`, `Simulation-Standards.md`, and `Dynamic-Quiz-System-Rules.md` when applicable.
 
+Scored assessment and exam-flow logic should follow `Timed-Exam-System-Rules.md` when timed or scored exam mode is included.
+
 It must not include:
 
 - DOM access such as `document`, `window`, or HTML elements.
@@ -323,6 +325,7 @@ Use this document together with:
 - `Units-and-Notation.md`
 - `Simulation-Standards.md`
 - `Dynamic-Quiz-System-Rules.md`
+- `Timed-Exam-System-Rules.md`
 - `Canvas-Guidelines.md`
 - `Formula-Display.md`
 - `UI-Guidelines.md`

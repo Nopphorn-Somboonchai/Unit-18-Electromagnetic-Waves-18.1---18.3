@@ -91,6 +91,7 @@ Examples:
 - Check physics formulas and units.
 - Check simulation validation cases.
 - Check dynamic quiz parameter generation, attempt consistency, and answer validation.
+- Check timed exam start screens, identity validation, timing, lock behavior, scoring, and submitted result data.
 - Check accessibility.
 - Check responsive behavior.
 - Check that documentation matches the actual implementation.
@@ -235,6 +236,7 @@ Use this document together with:
 - `Units-and-Notation.md`
 - `Simulation-Standards.md`
 - `Dynamic-Quiz-System-Rules.md`
+- `Timed-Exam-System-Rules.md`
 - `README-Template.md`
 - `AI-Agent-Rules.md`
 - `AGENTS.md`

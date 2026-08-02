@@ -76,6 +76,7 @@ These checks apply to every repository unless clearly marked `Not applicable`.
 | Physics standards | Physics content follows `Physics-Standards.md` when physics content exists. | [Pass / Partial / Fail / Not applicable] | |
 | Units and notation | Units, symbols, and formulas follow `Units-and-Notation.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Dynamic quiz rules | Dynamic quizzes follow `Dynamic-Quiz-System-Rules.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Timed exam rules | Timed or scored exams follow `Timed-Exam-System-Rules.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
 
 ---
 
@@ -95,6 +96,7 @@ Use this checklist when the primary profile is `learning-unit`.
 | Architecture boundaries | Physics logic is separated from UI, Canvas, storage, and formula rendering where practical. | [Pass / Partial / Fail / Not applicable] | |
 | Practice correctness | Practice or quiz answers are calculated from formulas when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Dynamic quiz system | Roll-number based or randomized quizzes follow `Dynamic-Quiz-System-Rules.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Timed exam system | Timed or scored exams document start screen, learner identity, timing, scoring, locking, and result data rules. | [Pass / Partial / Fail / Not applicable] | |
 | Numerical tolerance | Numerical answer checking documents tolerance when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Feedback quality | Feedback supports learning rather than only reporting correct or incorrect. | [Pass / Partial / Fail / Not applicable] | |
 | References | Textbooks, curricula, or learning sources are cited clearly. | [Pass / Partial / Fail / Not applicable] | |
@@ -116,6 +118,7 @@ Use this checklist when the primary profile is `interactive-simulation`.
 | Randomness | Randomized behavior is constrained and documented. | [Pass / Partial / Fail / Not applicable] | |
 | Validation cases | Simulation includes known cases or expected behavior checks. | [Pass / Partial / Fail / Not applicable] | |
 | Dynamic quiz behavior | Dynamic quiz behavior follows `Dynamic-Quiz-System-Rules.md` when the simulation includes randomized quiz questions. | [Pass / Partial / Fail / Not applicable] | |
+| Timed exam behavior | Timed or scored assessment behavior follows `Timed-Exam-System-Rules.md` when the simulation includes exam mode. | [Pass / Partial / Fail / Not applicable] | |
 | Rendering role | Canvas or visual code displays state and does not define physics truth. | [Pass / Partial / Fail / Not applicable] | |
 | Motion accessibility | Animation supports learning and avoids unnecessary distraction. | [Pass / Partial / Fail / Not applicable] | |
 | Responsive behavior | Simulation remains usable on supported screen sizes. | [Pass / Partial / Fail / Not applicable] | |
@@ -247,6 +250,7 @@ Use this checklist together with:
 - `Units-and-Notation.md`
 - `Simulation-Standards.md`
 - `Dynamic-Quiz-System-Rules.md`
+- `Timed-Exam-System-Rules.md`
 - `Validation-Workflow.md`
 - `Folder-Structure.md`
 - `Coding-Standards.md`

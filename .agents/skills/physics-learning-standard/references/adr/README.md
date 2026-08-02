@@ -16,6 +16,7 @@ Decision records explain why significant architectural or engineering decisions 
 | [0004](0004-define-physics-domain-standards.md) | Accepted | 2026-08-01 | Define Physics Domain Standards |
 | [0005](0005-define-validation-workflow.md) | Accepted | 2026-08-01 | Define Validation Workflow |
 | [0006](0006-define-dynamic-quiz-system-rules.md) | Accepted | 2026-08-01 | Define Dynamic Quiz System Rules |
+| [0007](0007-define-timed-exam-system-rules.md) | Accepted | 2026-08-02 | Define Timed Exam System Rules |
 
 ---
 
@@ -36,6 +37,7 @@ Examples:
 0004-define-physics-domain-standards.md
 0005-define-validation-workflow.md
 0006-define-dynamic-quiz-system-rules.md
+0007-define-timed-exam-system-rules.md
 ```
 
 ---

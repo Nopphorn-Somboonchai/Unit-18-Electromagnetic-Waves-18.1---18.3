@@ -2,7 +2,7 @@
 
 > Version information for the Physics Learning Standard.
 
-Current version: `1.5.0`
+Current version: `1.6.0`
 
 Status: Active standard baseline
 
@@ -154,3 +154,14 @@ Version `1.5.0` adds dynamic quiz system rules for:
 - Answer tolerance and unit handling
 - Worked solution generation
 - Dynamic quiz architecture boundaries
+
+Version `1.6.0` adds timed exam system rules for:
+
+- Scored and timed exam metadata
+- Exam start screen pattern
+- Learner identity fields
+- Timer and auto-submit behavior
+- Refresh, tab-switch, focus-loss, and lock behavior
+- Numerical answer display and tolerance expectations
+- Scoring architecture boundaries
+- Assessment session result data schema

@@ -6,6 +6,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Build output
+dist/
+
+# Draft & Planning Artifacts
+implementation_plan*
+walkthrough.md
+
 # OS Files
 .DS_Store
 Thumbs.db
+

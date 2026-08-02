@@ -128,6 +128,8 @@ physics-learning-standard/
 | **Units-and-Notation.md** | Unit, symbol, and notation standards                               |
 | **Simulation-Standards.md** | Simulation, numerical validation, and dynamic question standards  |
 | **Dynamic-Quiz-System-Rules.md** | Roll-number based dynamic quiz generation and validation rules |
+| **Timed-Exam-System-Rules.md** | Timed and scored exam flow, start screen, scoring, and result data rules |
+| **schemas/assessment-session.schema.json** | Shared data contract for stored or exported exam sessions |
 | **Validation-Workflow.md** | Validation workflow, reporting expectations, and automation scope  |
 | **README-Template.md**    | Official README template for all repositories                      |
 | **Coding-Standards.md**   | JavaScript / ES2025 coding standards                               |
@@ -183,6 +185,7 @@ This includes, but is not limited to:
 * Units and notation
 * Simulation validation
 * Dynamic quiz validation
+* Timed exam and scored assessment validation
 * Validation reporting
 
 Agent-generated code and documentation should comply with these standards unless a repository explicitly defines a justified exception.
@@ -194,6 +197,8 @@ Repositories with source code should use **Architecture-Enforcement.md** to revi
 Repositories with physics content should use **Physics-Standards.md**, **Units-and-Notation.md**, and **Simulation-Standards.md** to review scientific correctness, unit consistency, notation, numerical tolerance, and simulation behavior.
 
 Repositories with dynamic quizzes should use **Dynamic-Quiz-System-Rules.md** to review roll-number based parameter generation, non-deterministic random values, on-the-fly validation, safety constraints, tolerance, and worked solutions.
+
+Repositories with timed or scored exams should use **Timed-Exam-System-Rules.md** to review exam start screens, learner identity fields, timing, lock behavior, scoring, and submitted result data.
 
 Changes to this standard repository should use **Validation-Workflow.md** and run or document the result of **scripts/validate-standard.ps1** when possible.
 
@@ -299,7 +304,7 @@ Clarifications, corrections, and documentation improvements.
 Example:
 
 ```text
-v1.5.0
+v1.6.0
 ```
 
 ---
