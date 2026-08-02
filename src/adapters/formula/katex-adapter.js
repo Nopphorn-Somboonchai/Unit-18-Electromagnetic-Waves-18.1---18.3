@@ -41,6 +41,45 @@ export class KaTeXAdapter {
   }
 
   /**
+   * Scan and render all inline KaTeX math expressions \\(...\\) and $...$ in container
+   * @param {HTMLElement} [container=document.body]
+   */
+  static renderAllMath(container = document.body) {
+    if (typeof window.katex === 'undefined' || !container) return;
+
+    const targets = container.querySelectorAll('.glass-panel div, .glass-panel p, .glass-panel label, .glass-panel li, .glass-panel h3, .glass-panel h4');
+    targets.forEach((el) => {
+      if (el.querySelector('.katex')) return; // skip if already rendered KaTeX HTML
+      let html = el.innerHTML;
+      let modified = false;
+
+      // Replace \(...\)
+      if (html.includes('\\(')) {
+        html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
+          try {
+            modified = true;
+            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
+          } catch (e) { return match; }
+        });
+      }
+
+      // Replace $...$
+      if (html.includes('$')) {
+        html = html.replace(/\$(.*?)\$/g, (match, math) => {
+          try {
+            modified = true;
+            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
+          } catch (e) { return match; }
+        });
+      }
+
+      if (modified) {
+        el.innerHTML = html;
+      }
+    });
+  }
+
+  /**
    * Pre-defined physics LaTeX formula templates for Unit 18
    */
   static TEMPLATES = Object.freeze({

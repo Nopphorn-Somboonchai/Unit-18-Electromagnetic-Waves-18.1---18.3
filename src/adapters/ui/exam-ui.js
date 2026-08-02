@@ -46,19 +46,31 @@ export class ExamUIAdapter {
   setupReloadProtection() {
     if (typeof window === 'undefined') return;
 
-    // Intercept keyboard reload shortcuts (F5, Ctrl+R, Cmd+R)
+    // Intercept keyboard reload shortcuts (F5, Ctrl+R, Cmd+R, Ctrl+Shift+R, Cmd+Shift+R, Alt+F4)
     window.addEventListener('keydown', (e) => {
       if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+        const isR = e.key === 'r' || e.key === 'R' || e.keyCode === 82;
+        const isF5 = e.key === 'F5' || e.keyCode === 116;
+
         if (
-          e.key === 'F5' ||
-          (e.key === 'r' && (e.ctrlKey || e.metaKey)) ||
-          (e.key === 'R' && (e.ctrlKey || e.metaKey))
+          isF5 ||
+          (isR && (e.ctrlKey || e.metaKey))
         ) {
           e.preventDefault();
           e.stopPropagation();
-          alert('⚠️ ไม่อนุญาตให้กดรีโหลดหน้าเว็บ (F5 / Ctrl+R) ระหว่างทำข้อสอบเก็บคะแนน!\nหากต้องการส่งข้อสอบ กรุณากดปุ่ม "ส่งข้อสอบ" ด้านล่าง');
+          e.stopImmediatePropagation();
+          alert('⚠️ คุณกำลังจะพยายามทุจริตการสอบ!\nระบบทำการล็อคการกดรีโหลดหน้าจอระหว่างการทำข้อสอบ');
           return false;
         }
+      }
+    }, true);
+
+    // Block right-click context menu (reload prevention) during active exam
+    window.addEventListener('contextmenu', (e) => {
+      if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+        e.preventDefault();
+        alert('⚠️ คุณกำลังจะพยายามทุจริตการสอบ!\nระบบทำการล็อคคลิกขวาเพื่อป้องกันการรีโหลดหน้าจอระหว่างทำข้อสอบ');
+        return false;
       }
     }, true);
 
@@ -68,7 +80,7 @@ export class ExamUIAdapter {
         // Auto-submit current exam immediately before unloading to prevent exam reset
         this.examManager.submitExam(true);
 
-        const warningMsg = '⚠️ คุณกำลังทำข้อสอบเก็บคะแนนอยู่ หากคุณรีโหลดหรือออกจากหน้านี้ ข้อสอบของคุณจะถูกส่งและยุติการสอบทันที!';
+        const warningMsg = '⚠️ คุณกำลังจะพยายามทุจริตการสอบ! หากคุณรีโหลดหรือออกจากหน้านี้ ข้อสอบของคุณจะถูกส่งและยุติการสอบทันที!';
         e.preventDefault();
         e.returnValue = warningMsg;
         return warningMsg;
@@ -98,64 +110,186 @@ export class ExamUIAdapter {
   }
 
   /**
-   * 1. Start Screen View
+   * 1. Start Screen View (Strict 7-Step Layout per Timed-Exam-System-Rules.md)
    */
   renderStartScreenView() {
+    const defaultName = this.examManager.fullName || '';
+    const defaultClass = this.examManager.className || 'ม.6/1';
+    const defaultRoll = this.examManager.rollNumber || 1;
+
     this.container.innerHTML = `
-      <div class="glass-panel p-8 space-y-6 max-w-3xl mx-auto text-center border-t-4 border-t-emerald-500 animate-fade-in">
-        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-3xl mx-auto shadow-lg shadow-emerald-500/10">
-          🎓
-        </div>
+      <div class="glass-panel p-6 sm:p-8 space-y-6 max-w-3xl mx-auto text-left border-t-4 border-t-emerald-500 animate-fade-in">
         
-        <div>
-          <h2 class="text-2xl font-bold text-white">ระบบสอบเก็บคะแนน (Timed Exam 15 นาที)</h2>
-          <p class="text-slate-300 text-sm mt-2">
-            บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (18.1 - 18.3) | ข้อสอบ 5 ข้อ (10 คะแนนเต็ม)
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-xs">
-          <div class="p-3 bg-slate-800/40 rounded-lg">
-            <span class="text-slate-400 block mb-1">⏱️ เวลาในการทำข้อสอบ:</span>
-            <span class="font-bold text-white text-sm">15 นาทีถอยหลัง</span>
+        <!-- Step 1: Assessment Icon & Subject Marker -->
+        <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-3xl shrink-0 shadow-lg shadow-emerald-500/10">
+            🎓
           </div>
-          <div class="p-3 bg-slate-800/40 rounded-lg">
-            <span class="text-slate-400 block mb-1">📝 จำนวนข้อสอบ:</span>
-            <span class="font-bold text-white text-sm">5 ข้อ (1 ตัวเลือก + 4 คำนวณ)</span>
-          </div>
-          <div class="p-3 bg-slate-800/40 rounded-lg">
-            <span class="text-slate-400 block mb-1">🎯 คะแนนเต็ม:</span>
-            <span class="font-bold text-emerald-400 text-sm">10 คะแนน (ข้อละ 2 คะแนน)</span>
+          <div>
+            <!-- Step 2: Exam Title -->
+            <h2 class="text-2xl font-bold text-white tracking-tight">ทดสอบเก็บคะแนน ม.6</h2>
+            <!-- Step 3: Subtitle -->
+            <p class="text-slate-400 text-sm mt-0.5 font-medium">
+              บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (18.1 - 18.3)
+            </p>
           </div>
         </div>
 
-        <div class="flex items-center justify-center gap-4 pt-2">
-          <label for="input-exam-roll" class="text-sm font-semibold text-slate-300">
-            ยืนยันเลขที่ผู้สอบ (R):
-          </label>
-          <input type="number" id="input-exam-roll" min="1" max="40" value="${this.examManager.rollNumber}"
-            class="w-20 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-center text-lg focus:border-emerald-500 focus:outline-none" />
+        <!-- Step 4: Rules Warning Panel (Visible BEFORE identity form & start button) -->
+        <div class="bg-gradient-to-r from-red-950/60 via-slate-900/90 to-amber-950/40 border border-red-500/40 rounded-xl p-5 space-y-3 shadow-lg shadow-red-950/20">
+          <div class="flex items-center gap-2 text-red-400 font-bold text-base border-b border-red-500/20 pb-2">
+            <span>🚨</span> <span>กติกาการสอบ (อ่านก่อนเริ่ม):</span>
+          </div>
+          <ul class="space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed list-none">
+            <li class="flex items-start gap-2">
+              <span class="text-red-400 font-bold">•</span>
+              <span>มีข้อสอบทั้งหมด <strong>5 ข้อ</strong> ข้อละ 2 คะแนน (คะแนนเต็ม <strong>10 คะแนน</strong>)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400 font-bold">•</span>
+              <span>ขอบเขตเนื้อหา: 18.1 การเกิดคลื่นแม่เหล็กไฟฟ้า, 18.2 สเปกตรัมคลื่นแม่เหล็กไฟฟ้า (\\(E = hf\\)), 18.3 โพลาไรเซชัน (\\(I = I_0 \\cos^2 \\theta\\))</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400 font-bold">•</span>
+              <span>มีระยะเวลาจำกัดในการทำข้อสอบ <strong>15 นาที</strong> (นับถอยหลัง)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400 font-bold">•</span>
+              <span>การตอบคำถามประเภทคำนวณตัวเลข ให้ป้อนคำตอบเป็นทศนิยมไม่เกิน <strong>2 ตำแหน่ง</strong></span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400 font-bold">•</span>
+              <span class="text-red-300 font-semibold">ห้ามรีเฟรชหน้าจอหรือสลับแท็บ มิฉะนั้นระบบจะทำการล็อคและส่งคำตอบอัตโนมัติ (ถือว่าพยายามทุจริตการสอบ)</span>
+            </li>
+          </ul>
         </div>
 
-        <div>
-          <button id="btn-start-exam" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 mx-auto">
+        <!-- Step 5: Learner Identity Form -->
+        <div class="bg-slate-900/80 p-5 rounded-xl border border-slate-800 space-y-4">
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <span>👤</span> <span>ข้อมูลผู้เข้าสอบ:</span>
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Full Name -->
+            <div class="space-y-1.5 md:col-span-1">
+              <label for="input-exam-name" class="block text-xs font-semibold text-slate-300">
+                ชื่อ-นามสกุลผู้สอบ <span class="text-red-400">*</span>:
+              </label>
+              <input type="text" id="input-exam-name" value="${defaultName}" placeholder="ระบุชื่อจริง นามสกุล"
+                class="w-full px-3.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors" />
+            </div>
+
+            <!-- Room Select (ม.6/1 - ม.6/5) -->
+            <div class="space-y-1.5">
+              <label for="select-exam-class" class="block text-xs font-semibold text-slate-300">
+                ชั้น ม.6 / ห้อง <span class="text-red-400">*</span>:
+              </label>
+              <select id="select-exam-class"
+                class="w-full px-3.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors">
+                <option value="ม.6/1" ${defaultClass === 'ม.6/1' ? 'selected' : ''}>ม.6/1</option>
+                <option value="ม.6/2" ${defaultClass === 'ม.6/2' ? 'selected' : ''}>ม.6/2</option>
+                <option value="ม.6/3" ${defaultClass === 'ม.6/3' ? 'selected' : ''}>ม.6/3</option>
+                <option value="ม.6/4" ${defaultClass === 'ม.6/4' ? 'selected' : ''}>ม.6/4</option>
+                <option value="ม.6/5" ${defaultClass === 'ม.6/5' ? 'selected' : ''}>ม.6/5</option>
+              </select>
+            </div>
+
+            <!-- Student Roll Number -->
+            <div class="space-y-1.5">
+              <label for="input-exam-roll" class="block text-xs font-semibold text-slate-300">
+                เลขที่ <span class="text-red-400">*</span>:
+              </label>
+              <input type="number" id="input-exam-roll" min="1" max="40" value="${defaultRoll}" placeholder="1-40"
+                class="w-full px-3.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-sm focus:border-emerald-500 focus:outline-none transition-colors" />
+            </div>
+          </div>
+
+          <div id="exam-identity-error" class="hidden text-xs text-red-400 font-semibold pt-1">
+            ⚠️ กรุณากรอกชื่อ-นามสกุล เลือกห้องเรียน และระบุเลขที่ระหว่าง 1-40 ให้ครบถ้วนก่อนเริ่มทำข้อสอบ
+          </div>
+        </div>
+
+        <!-- Step 6 & Step 7: Actions (Back & Start Button) -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <!-- Step 6: Back or Cancel Action -->
+          <button id="btn-back-to-review" class="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition-colors border border-slate-700 flex items-center justify-center gap-2">
+            <span>←</span> <span>กลับไปทบทวนบทเรียน</span>
+          </button>
+
+          <!-- Step 7: Primary Start Action -->
+          <button id="btn-start-exam" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
             <span>🚀</span> <span>เริ่มทำข้อสอบทันที</span>
           </button>
         </div>
+
       </div>
     `;
 
-    const rollInput = this.container.querySelector('#input-exam-roll');
-    if (rollInput) {
-      rollInput.addEventListener('change', (e) => {
-        this.examManager.setRollNumber(parseInt(e.target.value, 10));
+    this._bindStartScreenEvents();
+    this.renderMathExpressions();
+  }
+
+  /**
+   * Bind event listeners and real-time validation for start screen
+   */
+  _bindStartScreenEvents() {
+    const inputName = this.container.querySelector('#input-exam-name');
+    const selectClass = this.container.querySelector('#select-exam-class');
+    const inputRoll = this.container.querySelector('#input-exam-roll');
+    const btnStart = this.container.querySelector('#btn-start-exam');
+    const btnBack = this.container.querySelector('#btn-back-to-review');
+    const errorBox = this.container.querySelector('#exam-identity-error');
+
+    const validateForm = () => {
+      const nameVal = inputName ? inputName.value.trim() : '';
+      const classVal = selectClass ? selectClass.value : '';
+      const rollVal = inputRoll ? parseInt(inputRoll.value, 10) : 0;
+
+      const isValid = nameVal.length > 0 && classVal.length > 0 && rollVal >= 1 && rollVal <= 40;
+
+      if (btnStart) {
+        btnStart.disabled = !isValid;
+        if (isValid) {
+          btnStart.className = 'w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 cursor-pointer';
+        } else {
+          btnStart.className = 'w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-base transition-all border border-slate-700 flex items-center justify-center gap-3 cursor-not-allowed opacity-60';
+        }
+      }
+
+      return isValid;
+    };
+
+    // Real-time input listeners
+    if (inputName) inputName.addEventListener('input', validateForm);
+    if (selectClass) selectClass.addEventListener('change', validateForm);
+    if (inputRoll) inputRoll.addEventListener('input', validateForm);
+
+    // Initial validation check
+    validateForm();
+
+    // Start exam handler
+    if (btnStart) {
+      btnStart.addEventListener('click', () => {
+        const nameVal = inputName ? inputName.value.trim() : '';
+        const classVal = selectClass ? selectClass.value : 'ม.6/1';
+        const rollVal = inputRoll ? parseInt(inputRoll.value, 10) : 1;
+
+        if (!validateForm()) {
+          if (errorBox) errorBox.classList.remove('hidden');
+          return;
+        }
+
+        if (errorBox) errorBox.classList.add('hidden');
+        this.examManager.setIdentity(nameVal, classVal, rollVal);
+        this.examManager.startExam();
       });
     }
 
-    const btnStart = this.container.querySelector('#btn-start-exam');
-    if (btnStart) {
-      btnStart.addEventListener('click', () => {
-        this.examManager.startExam();
+    // Back to review tab handler
+    if (btnBack) {
+      btnBack.addEventListener('click', () => {
+        TabNavigatorAdapter.switchToTab('tab-review');
       });
     }
   }
@@ -368,8 +502,11 @@ export class ExamUIAdapter {
         <div class="glass-panel p-6 border-t-4 ${isPass ? 'border-t-emerald-500' : 'border-t-amber-500'} grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div class="text-center md:text-left space-y-1">
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">สรุปผลการสอบเก็บคะแนน</span>
-            <h3 class="text-2xl font-bold text-white">ผลสอบเลขที่ #${res.rollNumber}</h3>
-            <p class="text-xs text-slate-400">ใช้เวลาสอบ: ${res.formattedTimeTaken}</p>
+            <h3 class="text-xl font-bold text-white">${res.fullName || 'ผู้สอบ'} (${res.className || 'ม.6/1'})</h3>
+            <p class="text-xs text-slate-300 font-medium">เลขที่: <span class="font-mono text-emerald-400 font-bold">#${res.rollNumber}</span> | ใช้เวลาสอบ: ${res.formattedTimeTaken}</p>
+            <p class="text-xs text-slate-400 font-medium flex items-center gap-1.5 justify-center md:justify-start pt-0.5">
+              <span>📅</span> <span>วันที่สอบ: ${res.formattedSubmittedAt || '2 ส.ค. 2569 เวลา 12:46 น.'}</span>
+            </p>
           </div>
 
           <!-- Total Score Gauge -->
@@ -388,12 +525,9 @@ export class ExamUIAdapter {
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col sm:flex-row md:flex-col gap-3">
-            <button id="btn-retake-exam" class="w-full px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2">
+          <div class="flex items-center justify-center">
+            <button id="btn-retake-exam" class="w-full px-5 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
               <span>🔄</span> <span>เริ่มสอบใหม่อีกครั้ง</span>
-            </button>
-            <button id="btn-clear-exam" class="w-full px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-colors flex items-center justify-center gap-2">
-              <span>🗑️</span> <span>ล้างข้อมูลผลสอบ</span>
             </button>
           </div>
         </div>
@@ -452,31 +586,28 @@ export class ExamUIAdapter {
       });
     }
 
-    const btnClear = this.container.querySelector('#btn-clear-exam');
-    if (btnClear) {
-      btnClear.addEventListener('click', () => {
-        if (confirm('คุณต้องการล้างข้อมูลผลสอบออกจาก LocalStorage ใช่หรือไม่?')) {
-          LocalStorageAdapter.clearExamResult();
-          this.examManager.examResult = null;
-          this.examManager.state = EXAM_STATES.IDLE;
-          this.renderStartScreenView();
-        }
-      });
-    }
-
     this.renderMathExpressions();
   }
 
   /**
-   * Render inline KaTeX math expressions \\(...\\)
+   * Render inline KaTeX math expressions \\(...\\) and $...$
    */
   renderMathExpressions() {
     if (typeof window.katex === 'undefined') return;
 
-    const textNodes = this.container.querySelectorAll('[id^="exam-problem-text"], [id^="exam-solution-steps"] li');
+    const textNodes = this.container.querySelectorAll('[id^="exam-problem-text"], [id^="exam-solution-steps"] li, .glass-panel li, .glass-panel p');
     textNodes.forEach((node) => {
       let html = node.innerHTML;
+      // Replace \(...\)
       html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
+        try {
+          return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
+        } catch (e) {
+          return match;
+        }
+      });
+      // Replace $...$
+      html = html.replace(/\$(.*?)\$/g, (match, math) => {
         try {
           return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
         } catch (e) {

@@ -31,10 +31,15 @@ if (typeof globalThis.localStorage === 'undefined') {
   };
 }
 
-// --- 1. Exam State Machine Tests ---
+// --- 1. Exam State Machine & Identity Tests ---
 console.log('--- Test Suite 1: Exam State Machine & Timer Setup ---');
 const em = new ExamManager(1);
 assert(em.state === EXAM_STATES.IDLE, 'Initial state is IDLE');
+
+em.setIdentity('สมชาย ใจดี', 'ม.6/3', 5);
+assert(em.fullName === 'สมชาย ใจดี', 'Learner full name set to สมชาย ใจดี');
+assert(em.className === 'ม.6/3', 'Learner room set to ม.6/3');
+assert(em.rollNumber === 5, 'Learner roll number set to 5');
 
 const questions = em.startExam();
 assert(em.state === EXAM_STATES.IN_PROGRESS, 'State transitions to IN_PROGRESS on startExam()');
@@ -57,8 +62,8 @@ assert(result.totalScore === 10, 'Perfect score is 10/10');
 assert(result.percentage === 100, 'Percentage is 100%');
 assert(result.gradedQuestions.every(q => q.isCorrect), 'All 5 questions graded correct');
 
-// --- 4. Non-Deterministic Dynamic System (R + B) Tests ---
-console.log('\n--- Test Suite 4: Non-Deterministic Dynamic Systems (R + B) ---');
+// --- 4. Dynamic Randomized Exam Paper Tests ---
+console.log('\n--- Test Suite 4: Dynamic Randomized Exam Paper (RNG) ---');
 const em1 = new ExamManager(1);
 const questionsAttempt1 = em1.startExam(1001);
 
@@ -66,9 +71,8 @@ const em2 = new ExamManager(1);
 const questionsAttempt2 = em2.startExam(9999);
 
 assert(questionsAttempt1[1].correctAnswer !== questionsAttempt2[1].correctAnswer,
-  'Different exam attempts for same Roll Number produce different randomized questions (R + B)');
+  'Different exam attempts produce randomized questions and values (RNG)');
 
-// Test Attempt-Scoped Determinism: regenerate attempt with same seed 1001
 const em1Repeat = new ExamManager(1);
 const questionsAttempt1Repeat = em1Repeat.startExam(1001);
 assert(questionsAttempt1[1].correctAnswer === questionsAttempt1Repeat[1].correctAnswer,

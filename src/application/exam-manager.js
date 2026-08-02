@@ -24,9 +24,13 @@ export const EXAM_STATES = Object.freeze({
 export class ExamManager {
   /**
    * @param {number} [rollNumber=1]
+   * @param {string} [fullName='']
+   * @param {string} [className='ม.6/1']
    */
-  constructor(rollNumber = 1) {
+  constructor(rollNumber = 1, fullName = '', className = 'ม.6/1') {
     this.rollNumber = validateRollNumber(rollNumber);
+    this.fullName = fullName;
+    this.className = className;
     this.state = EXAM_STATES.IDLE;
     this.attemptSeed = 0;
 
@@ -42,6 +46,18 @@ export class ExamManager {
 
     this.onTickCallback = null;
     this.onStateChangeCallback = null;
+  }
+
+  /**
+   * Set student identity
+   * @param {string} name
+   * @param {string} room
+   * @param {number} roll
+   */
+  setIdentity(name, room, roll) {
+    this.fullName = name ? String(name).trim() : '';
+    this.className = room ? String(room).trim() : 'ม.6/1';
+    this.rollNumber = validateRollNumber(roll);
   }
 
   /**
@@ -169,7 +185,13 @@ export class ExamManager {
       };
     });
 
+    const now = new Date();
+    const thaiDateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    const thaiTimeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
     this.examResult = {
+      fullName: this.fullName || 'ผู้สอบ',
+      className: this.className || 'ม.6/1',
       rollNumber: this.rollNumber,
       attemptSeed: this.attemptSeed,
       totalScore: totalScore,
@@ -177,6 +199,8 @@ export class ExamManager {
       percentage: (totalScore / APP_CONFIG.examMaxScore) * 100,
       timeTakenSeconds: timeTakenSeconds,
       formattedTimeTaken: `${Math.floor(timeTakenSeconds / 60)} นาที ${timeTakenSeconds % 60} วินาที`,
+      submittedAt: now.toISOString(),
+      formattedSubmittedAt: `${thaiDateStr} เวลา ${thaiTimeStr} น.`,
       isAutoSubmit: isAutoSubmit,
       gradedQuestions: gradedQuestions
     };
@@ -192,14 +216,15 @@ export class ExamManager {
   }
 
   /**
-   * Generate 5 mixed exam questions (1 Choice + 4 Numeric)
-   * Non-deterministic parameters combining Roll Number R and Attempt Seed B
+   * Generate 5 randomized exam questions (1 Choice + 4 Numeric)
+   * Dynamic RNG system that randomizes question variations & physical parameters
+   * every time a learner starts an exam.
    */
   _generateExamQuestions() {
     const R = this.rollNumber;
     const B = this.attemptSeed;
 
-    // Q1: Theory Multiple Choice (2 Points)
+    // Q1: Theory Multiple Choice (2 Points) - Random selection
     const theoryPool = [
       {
         problemText: 'ข้อใดต่อไปนี้กล่าวถึงสมบัติของคลื่นแม่เหล็กไฟฟ้า **ไม่ถูกต้อง**',
@@ -248,11 +273,8 @@ export class ExamManager {
       solutionSteps: [`**คำอธิบาย**: ${selectedTheory.explanation}`]
     };
 
-    // =========================================================================
-    // Q2: Topic 18.1 Numeric Pool (3 Variations)
-    // =========================================================================
+    // Q2: Topic 18.1 Numeric Pool (Random 3 Variations & Dynamic Params)
     const pool181 = [
-      // Variation 1: Find Wavelength λ from Frequency f
       () => {
         const freqMHz = getDynamicParam(R, 80, 1.5, 15, { min: 50, max: 400, decimals: 1 }, B);
         const freqHz = freqMHz * 1e6;
@@ -270,7 +292,6 @@ export class ExamManager {
           ]
         };
       },
-      // Variation 2: Find Frequency f from Wavelength λ
       () => {
         const lambdaM = getDynamicParam(R, 1.2, 0.05, 0.8, { min: 0.5, max: 6.0, decimals: 2 }, B);
         const freqHz = calculateFrequency(lambdaM);
@@ -289,7 +310,6 @@ export class ExamManager {
           ]
         };
       },
-      // Variation 3: Half-wave Dipole Antenna Length
       () => {
         const freqMHz = getDynamicParam(R, 90, 2.0, 20, { min: 80, max: 500, decimals: 1 }, B);
         const freqHz = freqMHz * 1e6;
@@ -314,11 +334,8 @@ export class ExamManager {
     const q2Generator = getSeededChoice(R, 2, pool181, B);
     const q2 = q2Generator();
 
-    // =========================================================================
-    // Q3: Topic 18.2 Numeric Pool (3 Variations)
-    // =========================================================================
+    // Q3: Topic 18.2 Numeric Pool (Random 3 Variations & Dynamic Params)
     const pool182 = [
-      // Variation 1: Photon Energy E (eV) from Frequency f
       () => {
         const freqFactor = getDynamicParam(R, 4.0, 0.05, 1.5, { min: 2.0, max: 9.0, decimals: 2 }, B + 1);
         const freqHz3 = freqFactor * 1e14;
@@ -337,7 +354,6 @@ export class ExamManager {
           ]
         };
       },
-      // Variation 2: Frequency f from Photon Energy E (eV)
       () => {
         const energyEV = getDynamicParam(R, 1.8, 0.05, 0.8, { min: 1.5, max: 4.5, decimals: 2 }, B + 1);
         const energyJ = energyEV * 1.602e-19;
@@ -357,7 +373,6 @@ export class ExamManager {
           ]
         };
       },
-      // Variation 3: Photon Energy E (eV) from Wavelength λ (nm)
       () => {
         const lambdaNm = getDynamicParam(R, 420, 5.0, 60, { min: 400, max: 700, decimals: 0 }, B + 1);
         const lambdaM = lambdaNm * 1e-9;
@@ -382,11 +397,8 @@ export class ExamManager {
     const q3Generator = getSeededChoice(R, 3, pool182, B + 1);
     const q3 = q3Generator();
 
-    // =========================================================================
-    // Q4: Topic 18.3 Numeric Pool (3 Variations)
-    // =========================================================================
+    // Q4: Topic 18.3 Numeric Pool (Random 3 Variations & Dynamic Angles)
     const pool183 = [
-      // Variation 1: Unpolarized light through P1 and P2 (% Transmitted)
       () => {
         const standardAngles = [0, 30, 45, 60, 90];
         const angleDeg = getSeededChoice(R, 4, standardAngles, B + 2);
@@ -406,11 +418,10 @@ export class ExamManager {
           ]
         };
       },
-      // Variation 2: Linearly Polarized light through P2 (Intensity in W/m^2)
       () => {
         const standardAngles = [0, 30, 45, 60, 90];
         const angleDeg = getSeededChoice(R, 4, standardAngles, B + 2);
-        const I1 = 100; // 100 W/m^2 after P1
+        const I1 = 100;
         const I2 = calculateMalusIntensity(I1, angleDeg);
         return {
           id: 'exam_q4',
@@ -425,12 +436,11 @@ export class ExamManager {
           ]
         };
       },
-      // Variation 3: Initial Polarized Light I0 = 80% through P1 and P2
       () => {
         const standardAngles = [0, 30, 45, 60, 90];
         const angleDeg = getSeededChoice(R, 4, standardAngles, B + 2);
         const I0 = 80;
-        const I1 = I0 / 2; // 40%
+        const I1 = I0 / 2;
         const I2 = calculateMalusIntensity(I1, angleDeg);
         return {
           id: 'exam_q4',
@@ -451,13 +461,11 @@ export class ExamManager {
     const q4Generator = getSeededChoice(R, 4, pool183, B + 2);
     const q4 = q4Generator();
 
-    // =========================================================================
-    // Q5: Topic 18.1 Monopole Antenna Length (Quarter-wave)
-    // =========================================================================
+    // Q5: Monopole Antenna Quarter-wave (Dynamic frequency parameter)
     const freq5MHz = getDynamicParam(R, 85, 1.5, 15, { min: 50, max: 400, decimals: 1 }, B + 3);
     const freq5Hz = freq5MHz * 1e6;
     const lambda5 = calculateWavelength(freq5Hz);
-    const antennaLen = lambda5 / 4; // Quarter-wave monopole
+    const antennaLen = lambda5 / 4;
     const q5 = {
       id: 'exam_q5',
       type: 'numeric',

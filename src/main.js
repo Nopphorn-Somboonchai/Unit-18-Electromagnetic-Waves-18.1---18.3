@@ -91,6 +91,7 @@ function renderFormulaHeadings() {
     KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.VECTOR_FIELD, 'katex-formula-18-1');
     KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.PHOTON_ENERGY, 'katex-formula-18-2');
     KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.MALUS_LAW, 'katex-formula-18-3');
+    KaTeXAdapter.renderAllMath(document.body);
   }, 100);
 }
 
