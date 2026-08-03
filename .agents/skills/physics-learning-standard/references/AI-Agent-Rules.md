@@ -73,6 +73,9 @@ AI-generated work should comply with:
 * Simulation-Standards.md
 * Dynamic-Quiz-System-Rules.md
 * Timed-Exam-System-Rules.md
+* Internationalization-and-Localization.md
+* Security-and-Privacy.md
+* Performance-Standards.md
 * Validation-Workflow.md
 * Coding-Standards.md
 * Naming-Conventions.md
@@ -82,6 +85,9 @@ AI-generated work should comply with:
 * Accessibility.md
 
 Project standards take precedence over general coding preferences.
+
+Use the Document Selection Matrix in `AGENTS.md` to choose additional
+task-specific standards without reading unrelated domain standards.
 
 ---
 
@@ -105,6 +111,12 @@ Use **Physics-Standards.md**, **Units-and-Notation.md**, and **Simulation-Standa
 Use **Dynamic-Quiz-System-Rules.md** when creating or modifying dynamic quizzes, randomized assessments, roll-number based parameter generation, on-the-fly validation, or worked solution generation.
 
 Use **Timed-Exam-System-Rules.md** when creating or modifying timed exams, scored assessments, exam start screens, learner identity fields, lock behavior, scoring, or submitted exam data.
+
+Use **Internationalization-and-Localization.md** when creating or modifying Thai-English text, bilingual labels, encoding, locale-sensitive formatting, or learner-facing translated content.
+
+Use **Security-and-Privacy.md** when creating or modifying learner data collection, input handling, storage, export, backend submission, secrets, or privacy-sensitive flows.
+
+Use **Performance-Standards.md** when creating or modifying simulations, Canvas rendering, dynamic generation loops, large assets, runtime performance, or assessment submission behavior.
 
 Use **Validation-Workflow.md** when finishing changes or reviewing repository compliance.
 

@@ -118,6 +118,12 @@ Recommended practices:
 
 Optimize only after identifying real performance requirements.
 
+Use `Performance-Standards.md` when Canvas rendering, animation loops, large
+assets, or responsiveness affect the learning experience.
+
+Canvas performance work must preserve adapter boundaries. Rendering code should
+not become the source of physics truth.
+
 ---
 
 # Reusable Components
@@ -140,24 +146,9 @@ Avoid duplicating rendering logic across repositories.
 
 Canvas should only visualize application state.
 
-The following separation should always be maintained:
+Follow the dependency direction in `Architecture.md` and the adapter boundary rules in `Architecture-Enforcement.md`.
 
-```text id="p0x9jw"
-Physics Domain
-        │
-        ▼
-Application Services
-        │
-        ▼
-Canvas Adapter
-        │
-        ▼
-HTML Canvas
-```
-
-Rendering should depend on application data.
-
-Application logic should never depend on rendering.
+Rendering should depend on application data; application logic should never depend on rendering.
 
 ---
 
@@ -178,19 +169,10 @@ Avoid coupling rendering logic directly to browser-specific behavior whenever po
 
 # Relationship to Other Standards
 
-This document complements:
+Full standards index: `README.md`.
 
-* **Physics-Standards.md**
-* **Simulation-Standards.md**
-* **Dynamic-Quiz-System-Rules.md**
-* **Architecture.md**
-* **Architecture-Enforcement.md**
-* **Folder-Structure.md**
-* **Coding-Standards.md**
-* **Formula-Display.md**
-* **Accessibility.md**
-
-Together, these standards ensure consistent visualization across the Physics Learning ecosystem.
+Closest companions: `Architecture-Enforcement.md`, `Simulation-Standards.md`,
+`Performance-Standards.md`, `Formula-Display.md`, and `Accessibility.md`.
 
 ---
 

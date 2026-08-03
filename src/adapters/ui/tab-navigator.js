@@ -7,12 +7,42 @@ export class TabNavigatorAdapter {
   static isExamInProgress = false;
 
   /**
-   * Set exam protection lock state
+   * Set exam protection lock state and switch to exam tab if active
    * @param {boolean} inProgress
    */
   static setExamInProgress(inProgress) {
     this.isExamInProgress = !!inProgress;
     this.updateTabLockUI();
+    if (this.isExamInProgress) {
+      this.switchToTab('tab-exam');
+    }
+  }
+
+  /**
+   * Switch active tab view programmatically
+   * @param {string} targetTabId
+   */
+  static switchToTab(targetTabId) {
+    if (typeof document === 'undefined') return;
+
+    const tabButtons = document.querySelectorAll('.nav-tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach((b) => {
+      if (b.getAttribute('data-tab') === targetTabId) {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+
+    tabContents.forEach((content) => {
+      if (content.id === targetTabId) {
+        content.classList.remove('hidden');
+      } else {
+        content.classList.add('hidden');
+      }
+    });
   }
 
   /**
@@ -79,5 +109,11 @@ export class TabNavigatorAdapter {
         }
       });
     });
+
+    // If an exam session was resumed during initialization, ensure exam tab is active
+    if (this.isExamInProgress) {
+      this.switchToTab('tab-exam');
+      this.updateTabLockUI();
+    }
   }
 }

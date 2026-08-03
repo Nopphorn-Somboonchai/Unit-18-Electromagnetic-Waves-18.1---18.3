@@ -50,6 +50,7 @@ export const APP_CONFIG = Object.freeze({
   // LocalStorage Keys
   storageKeys: {
     examResult: 'unit18_exam_result',
+    examSession: 'unit18_exam_session',
     userRollNumber: 'unit18_user_roll_number',
     themePreference: 'unit18_theme',
   }

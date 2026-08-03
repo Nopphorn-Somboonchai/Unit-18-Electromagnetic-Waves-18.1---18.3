@@ -103,9 +103,10 @@ For learning activities, rounded constants may be used when they improve clarity
 Example:
 
 ```text
-g = 9.8 m/s^2
-Use case: High-school mechanics problems.
-Approximation: Rounded near Earth's surface.
+g = 10 m/s^2
+Use case: High-school mechanics classroom problems.
+Approximation: Learning approximation near Earth's surface.
+Precision note: Use a documented precision value when precision matters.
 ```
 
 ---
@@ -224,13 +225,6 @@ Repositories may also cite textbooks, curricula, and local teaching materials wh
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Architecture-Enforcement.md`
-- `Formula-Display.md`
-- `Canvas-Guidelines.md`
-- `Standard-Compliance-Checklist.md`
-- `AI-Agent-Rules.md`
+Closest companions: `Units-and-Notation.md`, `Simulation-Standards.md`, `Dynamic-Quiz-System-Rules.md`, and `Architecture-Enforcement.md`.

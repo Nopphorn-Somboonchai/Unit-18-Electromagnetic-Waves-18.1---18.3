@@ -226,19 +226,9 @@ Repositories should:
 
 # Relationship to Other Standards
 
-This document should be used together with the following standards:
+Full standards index: `README.md`.
 
-* **Principles.md** — Engineering philosophy
-* **Architecture-Enforcement.md** — Dependency and responsibility boundary rules
-* **Folder-Structure.md** — Repository organization
-* **Coding-Standards.md** — Coding conventions
-* **Naming-Conventions.md** — Naming rules
-* **Canvas-Guidelines.md** — Canvas implementation
-* **Formula-Display.md** — Formula rendering
-* **Accessibility.md** — Accessibility requirements
-* **AI-Agent-Rules.md** — AI-assisted development
-
-Together, these documents define the engineering standards for the entire Physics Learning ecosystem.
+Closest companions: `Principles.md`, `Architecture-Enforcement.md`, `Folder-Structure.md`, and `Decision-Records.md`.
 
 ---
 

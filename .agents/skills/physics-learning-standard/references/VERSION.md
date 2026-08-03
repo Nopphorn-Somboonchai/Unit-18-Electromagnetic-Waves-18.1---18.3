@@ -2,11 +2,11 @@
 
 > Version information for the Physics Learning Standard.
 
-Current version: `1.6.0`
+Current version: `1.13.0`
 
 Status: Active standard baseline
 
-Effective date: 2026-08-01
+Effective date: 2026-08-02
 
 ---
 
@@ -165,3 +165,62 @@ Version `1.6.0` adds timed exam system rules for:
 - Numerical answer display and tolerance expectations
 - Scoring architecture boundaries
 - Assessment session result data schema
+
+Version `1.7.0` standardizes high-school gravitational acceleration learning guidance for:
+
+- Default learning approximation `g = 10 m/s^2` near Earth's surface.
+- Documented precision-focused exceptions when a repository needs a more precise value.
+- Consistent constants guidance across physics standards, units and notation, simulation examples, and README templates.
+
+Version `1.7.1` reduces duplicate guidance without changing repository expectations:
+
+- Shortened repeated relationship sections by using `README.md` as the full standards index.
+- Replaced repeated adapter-layer diagrams in Canvas, UI, and Formula standards with references to the canonical architecture documents.
+- Preserved adjacent-standard references where they are most useful during review.
+
+Version `1.8.0` adds a reference implementation example for:
+
+- A `learning-unit` repository profile.
+- Domain-Centric Architecture using `src/physics/`, `src/application/`, and adapter layers.
+- Roll-number based dynamic quiz generation and attempt-scoped validation.
+- Timed exam start screen, scoring coordination, and assessment session data shape.
+- Physics Domain and application-level tests.
+
+Version `1.9.0` adds dynamic quiz generation fallback strategy guidance for:
+
+- `maxRetries` and documented regeneration limits.
+- Retry exhaustion behavior before showing a question.
+- Respectful learner-facing generation failure messages.
+- Review logging fields for failed generated candidates.
+- Timed exam coordination so generation failures happen before timers and submissions.
+
+Version `1.10.0` adds timed exam interruption recovery guidance for:
+
+- Local persistence scope for in-progress timed or scored attempts.
+- Recovery flow after refresh, browser return, offline mode, or interrupted sessions.
+- Timer continuity based on the original start timestamp.
+- Submission sync or export status labels such as `local-only`, `pending-sync`, and `sync-failed`.
+- Optional assessment session schema fields for recovery timestamps, recovery action, and sync status.
+
+Version `1.11.0` adds implementation support examples for:
+
+- Reusable contract-test templates for Physics Domain formula behavior.
+- Reusable contract-test templates for dynamic question generation and attempt consistency.
+- Reusable contract-test templates for numerical answer validation and tolerance behavior.
+- Profile-specific README examples for `interactive-simulation`, `shared-library`, `physics-engine`, `documentation-only`, and `utility-package` repositories.
+- Template references that help child repositories choose the right example without treating examples as production logic.
+
+Version `1.12.0` adds automation and token-efficiency support for:
+
+- Read-only child repository validation through `scripts/validate-repository.ps1`.
+- Basic README profile, standard version, compliance status, maintainer, structure, validation, and license checks for child repositories.
+- Basic architecture boundary checks for `src/physics/`, `src/application/`, and strict `physics-engine` repositories.
+- Script usage documentation in `scripts/README.md`.
+- An AI document selection matrix in `AGENTS.md` to reduce unnecessary standards reading while preserving task-specific coverage.
+
+Version `1.13.0` adds expanded governance guidance for:
+
+- Thai-English internationalization, localization, locale formatting, and UTF-8 encoding expectations.
+- Learner data privacy, input handling, assessment integrity, local storage, export, submission, and secrets handling.
+- Performance expectations for simulations, Canvas rendering, dynamic generation, assets, and assessment submission.
+- Updated repository templates, compliance checks, AI agent reading rules, validation checks, and ADR records for the new governance areas.

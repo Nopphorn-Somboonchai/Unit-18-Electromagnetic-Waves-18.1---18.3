@@ -274,13 +274,9 @@ Choose one convention and use it consistently.
 
 # Relationship to Other Standards
 
-This document complements:
+Full standards index: `README.md`.
 
-* **Architecture.md**
-* **Folder-Structure.md**
-* **Coding-Standards.md**
-
-Together, these standards ensure that repositories remain consistent, understandable, and easy to maintain.
+Closest companions: `Folder-Structure.md`, `Coding-Standards.md`, and `Architecture-Enforcement.md`.
 
 ---
 

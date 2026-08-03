@@ -186,6 +186,19 @@
         "locked"
       ]
     },
+    "syncStatus": {
+      "type": "string",
+      "enum": [
+        "not-applicable",
+        "local-only",
+        "pending-export",
+        "exported",
+        "pending-sync",
+        "synced",
+        "sync-failed",
+        "conflict-review"
+      ]
+    },
     "lockReason": {
       "type": "string",
       "enum": [
@@ -196,6 +209,31 @@
         "manual-lock",
         "not-applicable"
       ]
+    },
+    "savedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recoveredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "syncedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recoveryAction": {
+      "type": "string",
+      "enum": [
+        "not-applicable",
+        "resume",
+        "submit-expired",
+        "discard",
+        "teacher-reset"
+      ]
+    },
+    "clientClockWarning": {
+      "type": "string"
     },
     "durationSeconds": {
       "type": "integer",

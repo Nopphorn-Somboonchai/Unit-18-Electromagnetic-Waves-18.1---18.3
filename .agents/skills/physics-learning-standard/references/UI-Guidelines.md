@@ -180,6 +180,17 @@ Avoid technical jargon whenever possible.
 
 ---
 
+# Language and Localization
+
+Learner-facing text should follow `Internationalization-and-Localization.md`
+when a repository uses Thai-English text, bilingual labels, locale-sensitive
+formatting, or translated UI messages.
+
+Keep labels short enough for their containers. Long bilingual text should move
+to supporting copy instead of crowding compact controls.
+
+---
+
 # Learning Feedback
 
 Feedback should reinforce learning rather than simply report system status.
@@ -203,44 +214,20 @@ Timed or scored exam interfaces should align with **Timed-Exam-System-Rules.md**
 
 The user interface should present information rather than contain educational logic.
 
-The following separation should always be maintained:
+Follow the dependency direction in `Architecture.md` and the adapter boundary rules in `Architecture-Enforcement.md`.
 
-```text
-Physics Domain
-        │
-        ▼
-Application Services
-        │
-        ▼
-UI Adapter
-        │
-        ▼
-User Interface
-```
-
-The interface displays learning content.
-
-The Physics Domain defines learning content.
+The interface displays learning content; the Physics Domain defines learning content.
 
 ---
 
 # Relationship to Other Standards
 
-This document complements:
+Full standards index: `README.md`.
 
-* **Physics-Standards.md**
-* **Units-and-Notation.md**
-* **Simulation-Standards.md**
-* **Dynamic-Quiz-System-Rules.md**
-* **Timed-Exam-System-Rules.md**
-* **Architecture.md**
-* **Architecture-Enforcement.md**
-* **Canvas-Guidelines.md**
-* **Formula-Display.md**
-* **Accessibility.md**
-* **Coding-Standards.md**
-
-Together, these standards create a consistent learning experience throughout the Physics Learning ecosystem.
+Closest companions: `Accessibility.md`,
+`Internationalization-and-Localization.md`, `Formula-Display.md`,
+`Canvas-Guidelines.md`, `Architecture-Enforcement.md`, and
+`Timed-Exam-System-Rules.md`.
 
 ---
 

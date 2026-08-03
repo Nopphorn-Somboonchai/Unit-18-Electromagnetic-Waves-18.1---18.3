@@ -72,16 +72,27 @@ export class ExamManager {
    * Start new 15-minute exam session
    * @param {number} [customSeed=null] - Optional attempt seed for testing/reproducibility
    */
+  /**
+   * Start new 15-minute exam session
+   * @param {number} [customSeed=null] - Optional attempt seed for testing/reproducibility
+   */
   startExam(customSeed = null) {
     this.state = EXAM_STATES.IN_PROGRESS;
     this.timeRemaining = this.durationSeconds;
     this.startTime = Date.now();
+    this.endTime = this.startTime + (this.durationSeconds * 1000);
     this.userAnswers = {};
     this.examResult = null;
     this.attemptSeed = customSeed !== null ? customSeed : ((Date.now() ^ Math.floor(Math.random() * 100000)) >>> 0);
 
+    // Clear any previous exam result when starting a new attempt
+    LocalStorageAdapter.clearExamResult();
+
     // Generate 5 exam questions (1 Choice + 4 Numeric)
     this.questions = this._generateExamQuestions();
+
+    // Persist active exam session to storage adapter
+    this._saveSessionState();
 
     // Start 1-second countdown timer
     this._startTimer();
@@ -91,6 +102,64 @@ export class ExamManager {
     }
 
     return this.questions;
+  }
+
+  /**
+   * Helper to persist current active exam state to storage adapter
+   * @param {number} [activeQuestionIdx=0]
+   */
+  _saveSessionState(activeQuestionIdx = 0) {
+    if (this.state !== EXAM_STATES.IN_PROGRESS) return;
+    LocalStorageAdapter.saveExamSession({
+      fullName: this.fullName,
+      className: this.className,
+      rollNumber: this.rollNumber,
+      attemptSeed: this.attemptSeed,
+      startTime: this.startTime,
+      endTime: this.endTime,
+      questions: this.questions,
+      userAnswers: this.userAnswers,
+      activeQuestionIdx: activeQuestionIdx
+    });
+  }
+
+  /**
+   * Resume an existing in-progress exam session
+   * @param {Object} sessionData
+   * @returns {boolean} Success status
+   */
+  resumeExamSession(sessionData) {
+    if (!sessionData) return false;
+
+    this.fullName = sessionData.fullName || this.fullName;
+    this.className = sessionData.className || this.className;
+    this.rollNumber = sessionData.rollNumber || this.rollNumber;
+    this.attemptSeed = sessionData.attemptSeed || 0;
+    this.startTime = sessionData.startTime || Date.now();
+    this.endTime = sessionData.endTime || (this.startTime + this.durationSeconds * 1000);
+    this.questions = sessionData.questions || [];
+    this.userAnswers = sessionData.userAnswers || {};
+    this.restoredActiveQuestionIdx = sessionData.activeQuestionIdx || 0;
+
+    const now = Date.now();
+    const timeRemainingSeconds = Math.round((this.endTime - now) / 1000);
+
+    if (timeRemainingSeconds <= 0) {
+      this.state = EXAM_STATES.IN_PROGRESS;
+      this.timeRemaining = 0;
+      this.submitExam(true);
+      return false;
+    }
+
+    this.state = EXAM_STATES.IN_PROGRESS;
+    this.timeRemaining = timeRemainingSeconds;
+    this._startTimer();
+
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback(this.state);
+    }
+
+    return true;
   }
 
   /**
@@ -138,10 +207,12 @@ export class ExamManager {
    * Record answer for a question
    * @param {number} questionIndex - 0..4
    * @param {any} answer
+   * @param {number} [activeQuestionIdx=null]
    */
-  recordAnswer(questionIndex, answer) {
+  recordAnswer(questionIndex, answer, activeQuestionIdx = null) {
     if (this.state !== EXAM_STATES.IN_PROGRESS) return;
     this.userAnswers[questionIndex] = answer;
+    this._saveSessionState(activeQuestionIdx !== null ? activeQuestionIdx : questionIndex);
   }
 
   /**
@@ -205,8 +276,9 @@ export class ExamManager {
       gradedQuestions: gradedQuestions
     };
 
-    // Save to LocalStorage
+    // Save to storage adapter and clear active session
     LocalStorageAdapter.saveExamResult(this.examResult);
+    LocalStorageAdapter.clearExamSession();
 
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback(this.state, this.examResult);

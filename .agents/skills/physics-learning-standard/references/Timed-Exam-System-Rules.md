@@ -73,6 +73,7 @@ Every timed or scored exam must document:
 | Time limit | Time allowed in minutes, or `Not applicable` |
 | Numerical answer rule | Decimal places, tolerance, and units if applicable |
 | Lock or auto-submit rule | Conditions that lock or submit the exam |
+| Interruption recovery | Refresh, browser return, offline, network failure, and sync or export behavior |
 | Result storage | Where answers and scores are stored or exported |
 
 The metadata shown to learners must match the implemented exam behavior.
@@ -110,6 +111,7 @@ The start screen must include:
 - Time limit.
 - Numerical answer formatting rule when the exam accepts calculated answers.
 - Refresh, tab-switch, timeout, lock, or auto-submit rule when implemented.
+- Offline, refresh recovery, local persistence, or sync/export rule when implemented.
 - Learner identity fields.
 - Clear back or cancel action.
 - Clear start action.
@@ -205,6 +207,8 @@ If an exam has a time limit:
 - Timeout behavior is deterministic and documented.
 - The exam should auto-submit when time expires.
 - Submitted timestamps should be recorded.
+- Recovered attempts must derive remaining time from the original start time and
+  configured duration.
 
 The displayed duration must match the configured duration used by the scoring or
 submission logic.
@@ -226,6 +230,153 @@ When implemented:
 
 Strict controls are appropriate for classroom score collection. They may be
 unnecessary for practice mode.
+
+---
+
+# Offline and Network Failure Strategy
+
+Timed or scored exams must document what happens when an attempt is interrupted
+by refresh, browser close, offline mode, network loss, backend outage, or local
+storage failure.
+
+The strategy should match the repository's deployment model. A local-only
+classroom exam may use browser persistence and manual export. A backend-backed
+exam may use local persistence plus retryable synchronization. Repositories
+without timed or scored exams may mark this guidance as `Not applicable`.
+
+At minimum, the documented strategy should define:
+
+- Local persistence scope for in-progress attempts.
+- Recovery flow after reload, browser return, or interrupted session.
+- Sync or export behavior for completed submissions.
+- Submission and sync status labels.
+- Learner-facing message for pending, recovered, or failed submissions.
+- Review fields needed by teachers or maintainers.
+- Privacy limits for locally persisted learner data.
+
+## Local Persistence
+
+When local persistence is used, save only the attempt data needed for fair
+recovery and review:
+
+- Attempt ID.
+- Exam ID and version or configuration snapshot.
+- Learner identity fields required by the assessment.
+- Generated parameters or seed values for dynamic questions.
+- Draft answers entered by the learner when practical.
+- Original start timestamp and configured time limit.
+- Last saved timestamp.
+- Lock or auto-submit reason when applicable.
+- Local sync or export status.
+
+Do not store unnecessary sensitive data. If browser storage is unavailable, the
+exam should show a clear message before the learner starts or provide a
+documented teacher-controlled fallback.
+
+## Recovery Flow
+
+When a saved in-progress attempt exists, the system should detect it before
+starting a new attempt.
+
+The recovery flow should:
+
+- Preserve the original start timestamp.
+- Recalculate remaining time from the original start time and time limit.
+- Resume the same generated question parameters, draft answers, and scoring
+  context.
+- Submit or lock as `timeout` if the time limit expired while the learner was
+  away.
+- Avoid silently discarding saved attempts.
+- Allow discard only when the repository documents the teacher or maintainer
+  policy for doing so.
+
+Refreshing the page, closing the browser, or losing network access must not grant
+extra exam time unless a teacher-controlled reset is explicitly documented.
+
+## Sync and Export Status
+
+Assessment state and storage state should be tracked separately.
+
+Recommended assessment statuses:
+
+- `in-progress`
+- `submitted`
+- `auto-submitted`
+- `locked`
+
+Recommended sync or export statuses:
+
+- `not-applicable`
+- `local-only`
+- `pending-export`
+- `exported`
+- `pending-sync`
+- `synced`
+- `sync-failed`
+- `conflict-review`
+
+Do not mark an attempt as `synced` or `exported` until the target backend,
+download, or teacher-controlled export acknowledges the stored result.
+
+If submission or synchronization fails after scoring, the system should preserve
+the completed session data for retry or export and show a respectful message
+that explains the submission is pending review or retry.
+
+## Review and Audit Fields
+
+Recovered, pending, or failed submissions should record enough information for
+review without exposing hidden answer logic to learners.
+
+Useful fields include:
+
+- Attempt ID.
+- Original start timestamp.
+- Last saved timestamp.
+- Recovered timestamp.
+- Submitted timestamp.
+- Sync status.
+- Recovery action.
+- Lock or auto-submit reason.
+- Client clock warning when detected.
+
+---
+
+# Security and Privacy
+
+Timed or scored exams that collect learner identity, answers, scores, saved
+attempts, exports, or backend submissions must follow `Security-and-Privacy.md`.
+
+At minimum, exam documentation should define:
+
+- Learner data collected before the exam starts.
+- Why each field is needed.
+- Where attempts and submissions are stored.
+- Whether data is local-only, exported, or sent to a backend.
+- Input validation for identity fields, roll number, and answers.
+- Tamper limits for client-side scoring or local-only classroom exams.
+- Sync, export, retry, or failure status shown after submission.
+- Privacy limits for locally persisted learner data.
+
+Client-side integrity controls can support classroom workflows, but they should
+not be described as tamper-proof unless the repository has a verified backend or
+teacher-controlled review process.
+
+Do not commit real learner identities, real assessment submissions, secrets, or
+backend credentials to the repository.
+
+---
+
+# Performance and Submission Responsiveness
+
+Timed or scored exams that submit to a backend, export files, generate questions,
+or run under unstable networks should follow `Performance-Standards.md`.
+
+Submission behavior should be bounded and reviewable:
+
+- Preserve completed session data before retrying when practical.
+- Show pending, failed, local-only, exported, or synced status clearly.
+- Avoid granting extra time while waiting for generation or submission.
+- Avoid duplicate submissions, or mark duplicates for review.
 
 ---
 
@@ -288,6 +439,7 @@ At minimum, a submitted result should include:
 - Score.
 - Maximum score.
 - Submission status.
+- Sync or export status when applicable.
 - Lock or auto-submit reason when applicable.
 
 Do not store unnecessary sensitive data.
@@ -324,6 +476,11 @@ Use this checklist when reviewing a timed or scored exam system.
 | Identity validation | Are required learner fields validated before starting? |
 | Timing | Is the time limit displayed and enforced consistently? |
 | Lock behavior | Are refresh, tab-switch, timeout, or auto-submit rules documented and deterministic? |
+| Interruption recovery | Does the exam document local persistence, recovery flow, and offline or network failure behavior? |
+| Timer continuity | Do recovered attempts preserve the original start time instead of granting extra time? |
+| Sync/export status | Are pending, synced, failed, local-only, or exported results labeled clearly when applicable? |
+| Security and privacy | Are learner data, input validation, storage, export, tamper limits, and privacy notes documented? |
+| Submission performance | Are slow, failed, duplicate, or offline submissions handled and reviewable? |
 | Numerical answers | Are decimal, unit, and tolerance rules documented and enforced consistently? |
 | Scoring | Is scoring independent from UI rendering? |
 | Dynamic questions | Do generated questions also follow `Dynamic-Quiz-System-Rules.md`? |
@@ -334,16 +491,9 @@ Use this checklist when reviewing a timed or scored exam system.
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `Dynamic-Quiz-System-Rules.md`
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Architecture-Enforcement.md`
-- `Standard-Compliance-Checklist.md`
-- `README-Template.md`
-- `Validation-Workflow.md`
-- `UI-Guidelines.md`
-- `Accessibility.md`
-- `AI-Agent-Rules.md`
+Closest companions: `Dynamic-Quiz-System-Rules.md`, `Security-and-Privacy.md`,
+`Performance-Standards.md`, `Architecture-Enforcement.md`,
+`Standard-Compliance-Checklist.md`, `README-Template.md`, `UI-Guidelines.md`,
+and `Accessibility.md`.

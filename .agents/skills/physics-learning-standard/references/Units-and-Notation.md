@@ -157,13 +157,15 @@ Examples:
 
 | Symbol | Meaning | Recommended learning value | Unit | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| g | Gravitational acceleration near Earth's surface | 9.8 | m/s^2 | Approximation for high-school mechanics |
+| g | Gravitational acceleration near Earth's surface | 10 | m/s^2 | Default high-school learning approximation |
 | c | Speed of light in vacuum | 299792458 | m/s | Exact in SI |
 | e | Elementary charge | 1.602176634 x 10^-19 | C | Exact in SI |
 
 When precision matters, use current CODATA recommended values.
 
 When learning clarity matters, rounded values may be used if the approximation is documented.
+
+For high-school mechanics learning activities in this ecosystem, use `g = 10 m/s^2` as the default learning approximation near Earth's surface unless the repository documents a precision-focused reason to use a different value.
 
 ---
 
@@ -205,6 +207,9 @@ Example:
 
 Do not switch notation for the same concept without a clear reason.
 
+Use `Internationalization-and-Localization.md` for full Thai-English language,
+bilingual label, locale formatting, and UTF-8 encoding guidance.
+
 ---
 
 # Reference Sources
@@ -218,12 +223,8 @@ Authoritative unit references:
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `Physics-Standards.md`
-- `Formula-Display.md`
-- `Simulation-Standards.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Coding-Standards.md`
-- `README-Template.md`
-- `Standard-Compliance-Checklist.md`
+Closest companions: `Physics-Standards.md`, `Formula-Display.md`,
+`Simulation-Standards.md`, `Dynamic-Quiz-System-Rules.md`, and
+`Internationalization-and-Localization.md`.

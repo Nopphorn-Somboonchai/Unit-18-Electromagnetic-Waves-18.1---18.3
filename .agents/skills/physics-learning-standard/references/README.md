@@ -86,6 +86,10 @@ physics-learning-standard/
 ├── Units-and-Notation.md
 ├── Simulation-Standards.md
 ├── Dynamic-Quiz-System-Rules.md
+├── Timed-Exam-System-Rules.md
+├── Internationalization-and-Localization.md
+├── Security-and-Privacy.md
+├── Performance-Standards.md
 ├── Validation-Workflow.md
 ├── README-Template.md
 ├── Coding-Standards.md
@@ -96,6 +100,12 @@ physics-learning-standard/
 ├── Accessibility.md
 ├── AI-Agent-Rules.md
 ├── Decision-Records.md
+├── examples/
+│   ├── physics-unit-example/
+│   ├── readme-profile-examples/
+│   └── test-templates/
+├── schemas/
+│   └── assessment-session.schema.json
 ├── adr/
 │   ├── README.md
 │   ├── 0001-adopt-domain-centric-architecture.md
@@ -103,9 +113,19 @@ physics-learning-standard/
 │   ├── 0003-define-architecture-enforcement-rules.md
 │   ├── 0004-define-physics-domain-standards.md
 │   ├── 0005-define-validation-workflow.md
-│   └── 0006-define-dynamic-quiz-system-rules.md
+│   ├── 0006-define-dynamic-quiz-system-rules.md
+│   ├── 0007-define-timed-exam-system-rules.md
+│   ├── 0008-standardize-high-school-gravity-approximation.md
+│   ├── 0009-add-reference-implementation-example.md
+│   ├── 0010-define-dynamic-quiz-fallback-strategy.md
+│   ├── 0011-define-timed-exam-interruption-recovery.md
+│   ├── 0012-add-implementation-support-examples.md
+│   ├── 0013-add-child-repository-validation-and-agent-decision-matrix.md
+│   └── 0014-add-expanded-governance-guidance.md
 ├── scripts/
-│   └── validate-standard.ps1
+│   ├── README.md
+│   ├── validate-standard.ps1
+│   └── validate-repository.ps1
 └── LICENSE
 ```
 
@@ -128,8 +148,11 @@ physics-learning-standard/
 | **Units-and-Notation.md** | Unit, symbol, and notation standards                               |
 | **Simulation-Standards.md** | Simulation, numerical validation, and dynamic question standards  |
 | **Dynamic-Quiz-System-Rules.md** | Roll-number based dynamic quiz generation and validation rules |
-| **Timed-Exam-System-Rules.md** | Timed and scored exam flow, start screen, scoring, and result data rules |
-| **schemas/assessment-session.schema.json** | Shared data contract for stored or exported exam sessions |
+| **Timed-Exam-System-Rules.md** | Timed and scored exam flow, start screen, scoring, recovery, and result data rules |
+| **Internationalization-and-Localization.md** | Thai-English language, locale, encoding, and bilingual text guidance |
+| **Security-and-Privacy.md** | Learner data, privacy, input handling, assessment integrity, and submission security guidance |
+| **Performance-Standards.md** | Simulation, Canvas, dynamic generation, asset, and assessment submission performance guidance |
+| **schemas/assessment-session.schema.json** | Shared data contract for stored or exported exam sessions, including optional recovery and sync status fields |
 | **Validation-Workflow.md** | Validation workflow, reporting expectations, and automation scope  |
 | **README-Template.md**    | Official README template for all repositories                      |
 | **Coding-Standards.md**   | JavaScript / ES2025 coding standards                               |
@@ -140,8 +163,13 @@ physics-learning-standard/
 | **Accessibility.md**      | Accessibility requirements                                         |
 | **AI-Agent-Rules.md**     | Rules for AI-assisted development                                  |
 | **Decision-Records.md**   | Architectural Decision Records (ADR)                               |
+| **examples/physics-unit-example/** | Reference implementation for a learning-unit repository |
+| **examples/readme-profile-examples/** | Profile-specific README examples for child repositories |
+| **examples/test-templates/** | Reusable contract-test examples for physics, dynamic quiz, and answer validation behavior |
 | **adr/**                  | Individual decision record files                                   |
 | **scripts/validate-standard.ps1** | Lightweight validation script for this standard repository |
+| **scripts/validate-repository.ps1** | Read-only lightweight validator for child repository README/profile/version evidence and basic source boundaries |
+| **scripts/README.md** | Usage notes for standard and child repository automation |
 
 ---
 
@@ -186,6 +214,9 @@ This includes, but is not limited to:
 * Simulation validation
 * Dynamic quiz validation
 * Timed exam and scored assessment validation
+* Internationalization and localization
+* Security and learner data privacy
+* Performance and responsiveness
 * Validation reporting
 
 Agent-generated code and documentation should comply with these standards unless a repository explicitly defines a justified exception.
@@ -198,9 +229,19 @@ Repositories with physics content should use **Physics-Standards.md**, **Units-a
 
 Repositories with dynamic quizzes should use **Dynamic-Quiz-System-Rules.md** to review roll-number based parameter generation, non-deterministic random values, on-the-fly validation, safety constraints, tolerance, and worked solutions.
 
-Repositories with timed or scored exams should use **Timed-Exam-System-Rules.md** to review exam start screens, learner identity fields, timing, lock behavior, scoring, and submitted result data.
+Repositories with timed or scored exams should use **Timed-Exam-System-Rules.md** to review exam start screens, learner identity fields, timing, lock behavior, offline or recovery behavior, scoring, and submitted result data.
+
+Repositories with Thai-English, bilingual, or locale-sensitive learner-facing text should use **Internationalization-and-Localization.md** to review language choice, encoding, labels, and locale formatting.
+
+Repositories that collect, persist, export, or submit learner data should use **Security-and-Privacy.md** to review data minimization, input handling, privacy, assessment integrity, storage, export, and secrets.
+
+Repositories with simulations, Canvas rendering, dynamic generation, large assets, or assessment submission flows should use **Performance-Standards.md** to review responsiveness, bounded loops, asset loading, and retry behavior.
 
 Changes to this standard repository should use **Validation-Workflow.md** and run or document the result of **scripts/validate-standard.ps1** when possible.
+
+AI agents and maintainers reviewing child repositories may use
+**scripts/validate-repository.ps1** as a preflight check before completing the
+profile-based compliance review.
 
 ---
 
@@ -304,7 +345,7 @@ Clarifications, corrections, and documentation improvements.
 Example:
 
 ```text
-v1.6.0
+v1.13.0
 ```
 
 ---

@@ -314,23 +314,8 @@ Repositories without production code should mark implementation-specific archite
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `Architecture.md`
-- `Folder-Structure.md`
-- `Repository-Profiles.md`
-- `Standard-Compliance-Checklist.md`
-- `Coding-Standards.md`
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Timed-Exam-System-Rules.md`
-- `Canvas-Guidelines.md`
-- `Formula-Display.md`
-- `UI-Guidelines.md`
-- `AI-Agent-Rules.md`
+Closest companions: `Architecture.md`, `Folder-Structure.md`, `Repository-Profiles.md`, `Standard-Compliance-Checklist.md`, and `AI-Agent-Rules.md`.
 
-`Architecture.md` defines the architectural model.
-
-This document defines how that model is enforced during implementation and review.
+This document defines how the architectural model is enforced during implementation and review.

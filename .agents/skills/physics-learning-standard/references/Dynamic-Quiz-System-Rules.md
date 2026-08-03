@@ -232,7 +232,71 @@ Common invalid cases:
 - Values that contradict documented assumptions
 - Generated answer too large or too small for the intended learning level
 
-If generated values fail constraints, the system should regenerate base values or reject the attempt before showing the question.
+If generated values fail constraints, the system must use a documented fallback strategy before showing the question.
+
+---
+
+# Generation Fallback Strategy
+
+Every dynamic quiz generator should define how it handles failed generation.
+
+The fallback strategy should include:
+
+- `maxRetries`: the maximum number of regeneration attempts after the first failed generation.
+- Regeneration scope: which random base values or seed values may be regenerated.
+- Stable inputs: which validated learner inputs, such as `R`, must not change during fallback.
+- Failure behavior when all retries are exhausted.
+- Learner-facing error message.
+- Logging or review data needed for maintainers.
+
+Recommended default:
+
+```text
+maxRetries = 3
+```
+
+`maxRetries` should be a small non-negative integer. Use a larger value only when the repository documents why the generation space needs it.
+
+Fallback flow:
+
+```text
+1. Validate learner input such as R.
+2. Generate random base values.
+3. Generate candidate question parameters.
+4. Check all safety constraints.
+5. If constraints pass, store the generated values and show the question.
+6. If constraints fail, regenerate allowed random base values until maxRetries is reached.
+7. If no valid candidate is produced, reject the question or attempt before showing it.
+```
+
+After all retries are exhausted, the system must:
+
+- Not show a partially generated, unsafe, or misleading question.
+- Not silently change `R` or other validated learner identity values.
+- Not score the learner as incorrect for a system generation failure.
+- Return or display a respectful recovery message.
+- Record enough technical detail for review.
+
+Recommended learner-facing message:
+
+```text
+This question could not be generated safely. Please ask your teacher or instructor to restart the attempt.
+```
+
+Recommended technical log fields:
+
+- Question type or question ID
+- Attempt ID or session ID when available
+- Retry count and `maxRetries`
+- Failed constraint code or reason
+- Generated parameter summary when safe to store
+- Timestamp
+
+Logs should avoid unnecessary personal data and should not expose hidden answer logic to learners.
+
+If the dynamic quiz is part of a timed or scored exam, generation fallback should finish before the timer starts. A generation failure before the exam starts should be treated as a setup or system error, not as a learner submission.
+
+Once a valid generated parameter set is shown to the learner, fallback must stop for that attempt. Do not regenerate values during answer submission, scoring, feedback, or worked solution display.
 
 ---
 
@@ -366,6 +430,7 @@ Each dynamic quiz system should document:
 - Units
 - Constraints
 - Tolerance
+- Generation fallback strategy
 - Attempt reproducibility behavior
 - Validation method
 - Worked solution generation
@@ -389,6 +454,7 @@ Use this checklist when reviewing a dynamic quiz system.
 | On-the-fly validation | Is the answer calculated from formulas during validation? |
 | No hardcoded answers | Are production static answer tables avoided? |
 | Safety constraints | Are minimum, maximum, sign, denominator, and model constraints documented? |
+| Generation fallback | Are `maxRetries`, retry exhaustion behavior, learner message, and review logging documented? |
 | Units | Are units explicit and consistent? |
 | Tolerance | Is numerical tolerance documented and consistent with displayed rounding? |
 | Reproducibility | Can the attempt be reviewed or reproduced when needed? |
@@ -399,14 +465,6 @@ Use this checklist when reviewing a dynamic quiz system.
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Architecture-Enforcement.md`
-- `Standard-Compliance-Checklist.md`
-- `README-Template.md`
-- `Validation-Workflow.md`
-- `AI-Agent-Rules.md`
-
+Closest companions: `Physics-Standards.md`, `Units-and-Notation.md`, `Simulation-Standards.md`, `Timed-Exam-System-Rules.md`, and `Architecture-Enforcement.md`.

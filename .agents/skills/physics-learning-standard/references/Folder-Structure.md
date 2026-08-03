@@ -391,22 +391,9 @@ Use **Repository-Profiles.md** and **Standard-Compliance-Checklist.md** to deter
 
 # Relationship to Other Standards
 
-This document complements the following standards:
+Full standards index: `README.md`.
 
-* **Architecture.md** — Defines the architectural model.
-* **Architecture-Enforcement.md** — Defines dependency and responsibility boundary rules.
-* **Repository-Profiles.md** — Defines which repository type is being organized.
-* **Standard-Compliance-Checklist.md** — Defines how folder expectations are checked.
-* **Physics-Standards.md** — Defines how physics content should be protected.
-* **Units-and-Notation.md** — Defines unit and notation expectations.
-* **Simulation-Standards.md** — Defines simulation and numerical validation expectations.
-* **Dynamic-Quiz-System-Rules.md** — Defines dynamic quiz generation and validation expectations.
-* **Validation-Workflow.md** — Defines validation workflow and automation expectations.
-* **Coding-Standards.md** — Defines coding conventions.
-* **Naming-Conventions.md** — Defines naming rules.
-* **README-Template.md** — Defines project documentation.
-
-Repository organization should always remain consistent with these standards.
+Closest companions: `Architecture.md`, `Architecture-Enforcement.md`, `Repository-Profiles.md`, `Standard-Compliance-Checklist.md`, and `README-Template.md`.
 
 ---
 

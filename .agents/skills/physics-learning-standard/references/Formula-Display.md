@@ -155,24 +155,9 @@ Avoid duplicating formula presentation logic across repositories.
 
 Formula rendering should only present mathematical information.
 
-The following separation should always be maintained:
+Follow the dependency direction in `Architecture.md` and the adapter boundary rules in `Architecture-Enforcement.md`.
 
-```text id="hmv4ae"
-Physics Domain
-        │
-        ▼
-Application Services
-        │
-        ▼
-Formula Adapter
-        │
-        ▼
-Formula Renderer
-```
-
-The Physics Domain defines the equation.
-
-The Formula Adapter is responsible for presenting it.
+The Physics Domain defines the equation; the Formula Adapter presents it.
 
 ---
 
@@ -193,19 +178,9 @@ Accessibility should improve understanding without changing mathematical meaning
 
 # Relationship to Other Standards
 
-This document complements:
+Full standards index: `README.md`.
 
-* **Physics-Standards.md**
-* **Units-and-Notation.md**
-* **Dynamic-Quiz-System-Rules.md**
-* **Architecture.md**
-* **Architecture-Enforcement.md**
-* **Coding-Standards.md**
-* **Canvas-Guidelines.md**
-* **UI-Guidelines.md**
-* **Accessibility.md**
-
-Together, these standards ensure consistent presentation of mathematical content throughout the Physics Learning ecosystem.
+Closest companions: `Units-and-Notation.md`, `Physics-Standards.md`, `Architecture-Enforcement.md`, `UI-Guidelines.md`, and `Accessibility.md`.
 
 ---
 

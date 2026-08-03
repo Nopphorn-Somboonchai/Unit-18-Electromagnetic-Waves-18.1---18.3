@@ -82,6 +82,56 @@ const cleared = LocalStorageAdapter.clearExamResult();
 assert(cleared === true, 'LocalStorage clear operation succeeded');
 assert(LocalStorageAdapter.loadExamResult() === null, 'Exam result cleared from LocalStorage');
 
+// --- 5. Exam Session Persistence & Resume (Refresh Protection) Tests ---
+console.log('\n--- Test Suite 5: Exam Session Persistence & Resume ---');
+LocalStorageAdapter.clearExamSession();
+
+const sessionEm = new ExamManager(10);
+sessionEm.setIdentity('อนันต์ มุ่งมั่น', 'ม.6/2', 12);
+const sessionQs = sessionEm.startExam(5555);
+
+// Record answer for Q0 and Q1
+sessionEm.recordAnswer(0, sessionQs[0].correctChoiceIndex);
+sessionEm.recordAnswer(1, sessionQs[1].correctAnswer);
+
+// Verify session was saved to LocalStorage
+const savedSession = LocalStorageAdapter.loadExamSession();
+assert(savedSession !== null, 'Active exam session saved to LocalStorage');
+assert(savedSession.fullName === 'อนันต์ มุ่งมั่น', 'Saved session contains learner name');
+assert(savedSession.userAnswers[0] === sessionQs[0].correctChoiceIndex, 'Saved session contains user answer for Q0');
+
+// Simulate page refresh: Create new ExamManager and resume from savedSession
+const freshEm = new ExamManager(1);
+const resumedSuccess = freshEm.resumeExamSession(savedSession);
+
+assert(resumedSuccess === true, 'Exam session resumed successfully');
+assert(freshEm.state === EXAM_STATES.IN_PROGRESS, 'Resumed state is IN_PROGRESS');
+assert(freshEm.questions[0].title === sessionQs[0].title, 'Resumed questions match original session');
+assert(freshEm.userAnswers[0] === sessionQs[0].correctChoiceIndex, 'Resumed user answers match recorded choice');
+assert(freshEm.timeRemaining <= 900 && freshEm.timeRemaining > 800, 'Remaining time reflects active exam duration');
+
+// Submit exam and verify session is cleared
+freshEm.submitExam(false);
+assert(LocalStorageAdapter.loadExamSession() === null, 'Active exam session cleared from LocalStorage upon submission');
+
+// Test expired session auto-submit
+const expiredSession = {
+  fullName: 'ทดสอบ หมดเวลา',
+  className: 'ม.6/1',
+  rollNumber: 1,
+  attemptSeed: 7777,
+  startTime: Date.now() - 1000 * 1000,
+  endTime: Date.now() - 100 * 1000, // Expired 100s ago
+  questions: sessionQs,
+  userAnswers: { 0: sessionQs[0].correctChoiceIndex }
+};
+
+const expiredEm = new ExamManager(1);
+const expiredResumed = expiredEm.resumeExamSession(expiredSession);
+assert(expiredResumed === false, 'Expired session resume returns false');
+assert(expiredEm.state === EXAM_STATES.SUBMITTED, 'Expired session auto-submits on resume');
+assert(expiredEm.examResult.isAutoSubmit === true, 'Auto-submit flag set to true');
+
 console.log(`\n=======================================================`);
 console.log(`📊 TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
 console.log(`=======================================================`);

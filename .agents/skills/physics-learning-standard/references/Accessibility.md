@@ -171,6 +171,17 @@ The interface should help learners focus on understanding physics rather than in
 
 ---
 
+# Language Accessibility
+
+Localized and bilingual content should follow
+`Internationalization-and-Localization.md`.
+
+Check that translated labels, Thai-English terms, validation messages, and exam
+warnings remain readable, fit their containers, and are understandable in the
+learner's primary language.
+
+---
+
 # Alternative Representations
 
 Important educational concepts should be understandable through more than one form of presentation whenever practical.
@@ -198,19 +209,12 @@ Consistency reduces cognitive load and improves confidence.
 
 # Relationship to Other Standards
 
-This document complements:
+Full standards index: `README.md`.
 
-* **UI-Guidelines.md**
-* **Canvas-Guidelines.md**
-* **Formula-Display.md**
-* **Units-and-Notation.md**
-* **Simulation-Standards.md**
-* **Dynamic-Quiz-System-Rules.md**
-* **Timed-Exam-System-Rules.md**
-* **Architecture.md**
-* **Coding-Standards.md**
-
-Together, these standards provide an inclusive and consistent learning experience.
+Closest companions: `UI-Guidelines.md`,
+`Internationalization-and-Localization.md`, `Canvas-Guidelines.md`,
+`Formula-Display.md`, `Simulation-Standards.md`, and
+`Timed-Exam-System-Rules.md`.
 
 ---
 # Summary

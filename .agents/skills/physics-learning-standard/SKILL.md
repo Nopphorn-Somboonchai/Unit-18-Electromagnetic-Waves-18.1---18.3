@@ -1,9 +1,9 @@
 ---
 name: physics-learning-standard
-description: Official engineering standards, architectural guidelines, folder structures, coding standards, canvas/UI guidelines, formula display standards, and AI rules for the Physics Learning ecosystem (v1.6.0). Activate this skill whenever developing, refactoring, or planning interactive physics portals, simulators, or quiz modules.
+description: Official engineering standards, architectural guidelines, folder structures, coding standards, canvas/UI guidelines, formula display standards, internationalization, privacy/security, performance benchmarks, and AI rules for the Physics Learning ecosystem (v1.13.0). Activate this skill whenever developing, refactoring, or planning interactive physics portals, simulators, or quiz modules.
 ---
 
-# ⚛️ Physics Learning Standard (v1.6.0)
+# ⚛️ Physics Learning Standard (v1.13.0)
 
 > **Engineering Standards & Reference Architecture for the Physics Learning Ecosystem**
 
@@ -22,7 +22,7 @@ This skill defines the official engineering standards, reference architecture, a
 3. **Dependency Rule**: Dependencies always flow inward toward the Physics Domain:
    `UI -> Adapters -> Application Services -> Physics Domain`
 4. **Learning First**: Every engineering decision should prioritize educational clarity over technical complexity.
-5. **Accessibility by Default**: Ensure keyboard navigation, clear visual contrast, and readable formula presentation.
+5. **Accessibility & Governance**: Ensure keyboard navigation, Thai-English internationalization, learner data privacy, and optimized runtime performance.
 
 ---
 
@@ -43,7 +43,7 @@ src/
 
 ---
 
-## 📚 Detailed Standard References (v1.6.0 Baseline)
+## 📚 Detailed Standard References (v1.13.0 Baseline)
 
 For detailed guidelines on specific topics, refer to the files in the `references/` directory:
 
@@ -51,12 +51,15 @@ For detailed guidelines on specific topics, refer to the files in the `reference
 - 🏗️ [Architecture.md](references/Architecture.md) — Layered reference architecture & dependency rules
 - 🛡️ [Architecture-Enforcement.md](references/Architecture-Enforcement.md) — Architectural boundary enforcement & import rules
 - 📁 [Folder-Structure.md](references/Folder-Structure.md) — Standard layout rules for repository and source level
-- 🏷️ [Repository-Profiles.md](references/Repository-Profiles.md) — Tier 1/2/3 repository profiles and compliance requirements
+- 🏷️ [Repository-Profiles.md](references/Repository-Profiles.md) — Repository profiles and compliance requirements
 - 🔬 [Physics-Standards.md](references/Physics-Standards.md) — Scientific modeling, determinism, and precision guidelines
 - 🕹️ [Simulation-Standards.md](references/Simulation-Standards.md) — Interactive canvas physics simulation standards
-- 📝 [Dynamic-Quiz-System-Rules.md](references/Dynamic-Quiz-System-Rules.md) — Rules for dynamic question generators & assessment
-- ⏱️ [Timed-Exam-System-Rules.md](references/Timed-Exam-System-Rules.md) — Rules for scored, timed exam systems & start screen patterns
+- 📝 [Dynamic-Quiz-System-Rules.md](references/Dynamic-Quiz-System-Rules.md) — Rules for dynamic question generators, fallback strategies & assessment
+- ⏱️ [Timed-Exam-System-Rules.md](references/Timed-Exam-System-Rules.md) — Rules for scored, timed exam systems, start screen patterns & session recovery
 - 📐 [assessment-session.schema.json](references/schemas/assessment-session.schema.json) — Assessment session result data schema
+- 🌐 [Internationalization-and-Localization.md](references/Internationalization-and-Localization.md) — Thai-English bilingual labels, locale formatting & UTF-8 encoding
+- 🔐 [Security-and-Privacy.md](references/Security-and-Privacy.md) — Learner data privacy, input sanitization, export integrity & local storage rules
+- ⚡ [Performance-Standards.md](references/Performance-Standards.md) — Simulation FPS, dynamic question generation limits & asset optimization
 - 📏 [Units-and-Notation.md](references/Units-and-Notation.md) — SI unit conventions and mathematical notation
 - 💻 [Coding-Standards.md](references/Coding-Standards.md) — ES2025+ standards, module rules, pure functions
 - 🏷️ [Naming-Conventions.md](references/Naming-Conventions.md) — kebab-case for files, camelCase for vars, UPPER_SNAKE for constants
@@ -67,8 +70,8 @@ For detailed guidelines on specific topics, refer to the files in the `reference
 - ✅ [Standard-Compliance-Checklist.md](references/Standard-Compliance-Checklist.md) — Checklist for verifying standard compliance
 - 🔄 [Validation-Workflow.md](references/Validation-Workflow.md) — Workflow for standard compliance validation
 - 🤖 [AI-Agent-Rules.md](references/AI-Agent-Rules.md) — Rules for AI-assisted development and architectural preservation
-- 🎨 [DESIGN.md](../../DESIGN.md) — Comprehensive Web Design System (Color Tokens, Typography, Layouts)
-- 📜 [Decision-Records.md](references/Decision-Records.md) — Architectural Decision Records (ADR index)
-- 📜 [ADR Folder](references/adr/) — ADR records 0001-0007
-- 🛠️ [Validation Script](references/scripts/validate-standard.ps1) — PowerShell script for automated compliance validation
+- 📜 [Decision-Records.md](references/Decision-Records.md) — Architectural Decision Records (ADR index 0001-0014)
+- 📜 [ADR Folder](references/adr/) — ADR records 0001-0014
+- 🛠️ [Validation Scripts](references/scripts/) — PowerShell scripts (`validate-repository.ps1`, `validate-standard.ps1`) for compliance validation
+
 

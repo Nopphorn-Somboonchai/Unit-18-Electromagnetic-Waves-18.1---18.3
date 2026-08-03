@@ -102,7 +102,7 @@ Use one or more of:
 Example:
 
 ```text
-Expected: 9.8
+Expected: 10.0
 Student answer: accepted if |answer - expected| <= 0.1
 Tolerance type: absolute
 ```
@@ -257,6 +257,23 @@ Never rely only on animation to communicate essential physics information.
 
 ---
 
+# Performance and Responsiveness
+
+Simulations should follow `Performance-Standards.md` when rendering, numerical
+updates, generated values, large assets, or runtime loops affect usability.
+
+Performance work must preserve the documented physics model.
+
+Recommended expectations:
+
+- Keep physics state updates separate from rendering.
+- Pause or throttle simulation loops when inactive.
+- Avoid unbounded generation or update loops.
+- Document target responsiveness when it matters for the learning activity.
+- Re-run validation cases after performance optimizations.
+
+---
+
 # Review Checklist
 
 Use this checklist when reviewing simulations or dynamic questions.
@@ -272,19 +289,15 @@ Use this checklist when reviewing simulations or dynamic questions.
 | Randomness | Is randomness constrained and documented? |
 | Validation cases | Are known cases or expected behaviors checked? |
 | Visual clarity | Does the visual output support the physics model? |
+| Performance | Do update loops, rendering, generated values, and assets remain responsive on supported devices? |
 | Accessibility | Can learners understand the concept without relying only on motion? |
 
 ---
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Architecture-Enforcement.md`
-- `Canvas-Guidelines.md`
-- `Formula-Display.md`
-- `Accessibility.md`
-- `Standard-Compliance-Checklist.md`
+Closest companions: `Physics-Standards.md`, `Units-and-Notation.md`,
+`Dynamic-Quiz-System-Rules.md`, `Canvas-Guidelines.md`,
+`Performance-Standards.md`, and `Accessibility.md`.

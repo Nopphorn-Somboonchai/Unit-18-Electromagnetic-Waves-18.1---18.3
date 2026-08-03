@@ -2,7 +2,7 @@
 
 > Official README template for repositories in the Physics Learning Ecosystem.
 
-Template version: 1.6.0
+Template version: 1.13.0
 Standard source: `physics-learning-standard`
 
 ---
@@ -27,11 +27,16 @@ This section identifies what this repository is and how it fits into the Physics
 | Course | [Course name and code / Not applicable] |
 | Unit | [Unit number and topic / Not applicable] |
 | Main topic | [Main topic / Not applicable] |
+| Primary UI language | [Thai / English / Thai-English bilingual / Not applicable] |
+| Learner data handling | [Local only / exported file / backend submission / no learner data / Not applicable] |
 | Maintainer | [Maintainer name / Not applicable] |
 
 Fields that do not apply to this repository SHOULD be marked as `Not applicable`.
 
 Use `Repository-Profiles.md` to select the repository profile.
+
+Use `examples/readme-profile-examples/` when a filled profile-specific example
+would make the template easier to adapt.
 
 Use `Standard-Compliance-Checklist.md` to update the compliance status.
 
@@ -48,6 +53,11 @@ It supports physics learning through [explanations / simulations / practice acti
 This repository follows the standards defined in `physics-learning-standard`.
 
 When this repository includes physics content, it SHOULD follow `Physics-Standards.md`, `Units-and-Notation.md`, and `Simulation-Standards.md`.
+
+When this repository includes learner-facing Thai-English text, learner data,
+or performance-sensitive interactions, it SHOULD follow
+`Internationalization-and-Localization.md`, `Security-and-Privacy.md`, and
+`Performance-Standards.md` as applicable.
 
 ---
 
@@ -118,6 +128,8 @@ This repository covers:
 | :--- | :--- | :--- | :--- | :--- |
 | [symbol] | [meaning] | [value] | [unit] | [source / approximation / Not applicable] |
 
+For high-school mechanics learning activities, use `g = 10 m/s^2` as the default learning approximation near Earth's surface unless this repository documents a precision-focused reason to use a different value.
+
 ## Assumptions and Limitations
 
 - [Assumption or limitation 1]
@@ -154,6 +166,8 @@ Roll-number based or randomized dynamic quizzes SHOULD follow `Dynamic-Quiz-Syst
 
 When a quiz uses student roll number `R`, document the allowed range, parameter-generation rules, safety constraints, tolerance, and whether attempts are reproducible.
 
+When generated parameters can fail constraints, document the fallback strategy: `maxRetries`, retry exhaustion behavior, learner-facing error message, and logging or review data.
+
 ## Assessment
 
 - [Assessment feature / Not applicable]
@@ -175,6 +189,8 @@ Document the exam setup below:
 | Time limit | [Minutes / Not applicable] |
 | Numerical answer rule | [Decimal places, units, and tolerance / Not applicable] |
 | Lock or auto-submit rule | [Refresh, tab switch, timeout, or Not applicable] |
+| Offline or recovery rule | [Local persistence, recovery flow, sync/export behavior, or Not applicable] |
+| Security and privacy rule | [Data minimization, input validation, tamper limits, privacy notes, or Not applicable] |
 | Result storage | [Local only / exported file / backend / Not applicable] |
 
 The exam start screen SHOULD follow the start-screen pattern in
@@ -182,6 +198,14 @@ The exam start screen SHOULD follow the start-screen pattern in
 
 Stored or exported exam session data SHOULD follow
 `schemas/assessment-session.schema.json`.
+
+If the exam can be interrupted by refresh, browser close, offline mode, network
+loss, or backend failure, document the local persistence scope, recovery flow,
+timer continuity rule, and sync/export status labels.
+
+If the exam collects learner data, stores submissions, exports results, or uses
+backend submission, document learner data handling using
+`Security-and-Privacy.md`.
 
 ## Feedback
 
@@ -310,7 +334,20 @@ This section explains how to use, run, build, and test the repository.
 
 Use `Validation-Workflow.md` to decide which validation steps should be documented.
 
+For a lightweight standard preflight check from `physics-learning-standard`, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File [path-to-standard]\scripts\validate-repository.ps1 -Target .
+```
+
+Use `examples/test-templates/` for reusable physics domain, dynamic question,
+and numerical answer validation test patterns when applicable.
+
 If the repository depends on CDN libraries, web fonts, or internet access, document that requirement clearly.
+
+When simulations, Canvas rendering, generated questions, large assets, or
+assessment submissions affect responsiveness, document the relevant performance
+checks using `Performance-Standards.md`.
 
 ---
 
@@ -332,8 +369,13 @@ Before release, validate that:
 - Dynamic questions calculate answers from formulas.
 - Dynamic quizzes follow `Dynamic-Quiz-System-Rules.md` when applicable.
 - Roll-number based quizzes validate `R` and keep one attempt internally consistent.
+- Dynamic quiz generators define fallback behavior for failed parameter generation when applicable.
 - Timed or scored exams follow `Timed-Exam-System-Rules.md` when applicable.
+- Timed or scored exams document interruption recovery and sync/export behavior when applicable.
+- Learner data, input handling, storage, export, submission, and secrets follow `Security-and-Privacy.md` when applicable.
 - Exam session data follows `schemas/assessment-session.schema.json` when stored or exported.
+- Thai-English text, bilingual labels, locale formatting, and UTF-8 encoding follow `Internationalization-and-Localization.md` when applicable.
+- Simulations, Canvas rendering, dynamic generation, assets, and assessment submission follow `Performance-Standards.md` when applicable.
 - Numerical answers use documented tolerance when applicable.
 - Randomized values remain physically reasonable when applicable.
 - Documentation matches the actual repository.
@@ -356,12 +398,26 @@ Before release, validate that:
 - Exam forms expose labels for name, class, room, and student number fields when those fields are used.
 - Motion or animation supports learning and does not distract unnecessarily.
 
+## Internationalization, Security, and Performance Notes
+
+Document these items when applicable:
+
+| Area | Notes |
+| :--- | :--- |
+| Primary language | [Thai / English / Thai-English bilingual / Not applicable] |
+| Locale rules | [Decimal separator, date/time format, export labels, or Not applicable] |
+| Learner data | [Collected fields, storage/export/submission behavior, or Not applicable] |
+| Privacy limits | [Retention, local-only behavior, third-party services, or Not applicable] |
+| Performance checks | [Simulation FPS, generation retry behavior, submission retry behavior, or Not applicable] |
+
 ## AI Agent Notes
 
 AI agents working in this repository MUST:
 
 - Read this README before editing.
 - Follow `physics-learning-standard`.
+- Use the document selection matrix in the standard repository `AGENTS.md` to
+  choose task-specific standards without loading unrelated documents.
 - Use `Repository-Profiles.md` and `Standard-Compliance-Checklist.md` when assessing repository compliance.
 - Use `Architecture-Enforcement.md` when reviewing source-code boundaries.
 - Use `Physics-Standards.md` when reviewing physics content.
@@ -369,6 +425,9 @@ AI agents working in this repository MUST:
 - Use `Simulation-Standards.md` when reviewing simulations, dynamic questions, or numerical validation.
 - Use `Dynamic-Quiz-System-Rules.md` when reviewing dynamic quizzes, randomized assessments, roll-number based parameter generation, or on-the-fly answer validation.
 - Use `Timed-Exam-System-Rules.md` when reviewing timed exams, scored assessments, exam start screens, lock behavior, or submitted exam data.
+- Use `Internationalization-and-Localization.md` when reviewing Thai-English text, bilingual labels, encoding, or locale-specific formatting.
+- Use `Security-and-Privacy.md` when reviewing learner data, input handling, storage, export, submission, secrets, or privacy behavior.
+- Use `Performance-Standards.md` when reviewing simulations, Canvas rendering, dynamic generation, assets, runtime loops, or assessment submission performance.
 - Use `Validation-Workflow.md` when reporting validation.
 - Keep changes focused on the requested task.
 - Preserve architecture boundaries.

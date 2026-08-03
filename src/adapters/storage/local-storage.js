@@ -55,4 +55,51 @@ export class LocalStorageAdapter {
       return false;
     }
   }
+
+  /**
+   * Save active in-progress exam session to LocalStorage
+   * @param {Object} sessionData - Active exam state and question data
+   * @returns {boolean} Success status
+   */
+  static saveExamSession(sessionData) {
+    try {
+      const key = APP_CONFIG.storageKeys.examSession;
+      const serialized = JSON.stringify(sessionData);
+      localStorage.setItem(key, serialized);
+      return true;
+    } catch (err) {
+      console.warn('[LocalStorageAdapter] Failed to save exam session:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Load saved active exam session from LocalStorage
+   * @returns {Object|null} Exam session object or null
+   */
+  static loadExamSession() {
+    try {
+      const key = APP_CONFIG.storageKeys.examSession;
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
+    } catch (err) {
+      console.warn('[LocalStorageAdapter] Failed to load exam session:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Clear saved active exam session from LocalStorage
+   * @returns {boolean} Success status
+   */
+  static clearExamSession() {
+    try {
+      const key = APP_CONFIG.storageKeys.examSession;
+      localStorage.removeItem(key);
+      return true;
+    } catch (err) {
+      console.warn('[LocalStorageAdapter] Failed to clear exam session:', err);
+      return false;
+    }
+  }
 }

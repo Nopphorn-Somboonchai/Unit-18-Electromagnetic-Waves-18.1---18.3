@@ -265,23 +265,9 @@ Tests should improve confidence without becoming unnecessarily complex.
 
 # Relationship to Other Standards
 
-This document complements the following standards:
+Full standards index: `README.md`.
 
-* **Principles.md** — Engineering philosophy
-* **Architecture.md** — System architecture
-* **Architecture-Enforcement.md** — Dependency and responsibility boundary rules
-* **Physics-Standards.md** — Scientific correctness standards
-* **Units-and-Notation.md** — Unit and notation standards
-* **Simulation-Standards.md** — Simulation and numerical validation standards
-* **Dynamic-Quiz-System-Rules.md** — Dynamic quiz generation and validation rules
-* **Folder-Structure.md** — Repository organization
-* **Naming-Conventions.md** — Naming rules
-* **Canvas-Guidelines.md** — Canvas implementation
-* **UI-Guidelines.md** — User interface standards
-* **Formula-Display.md** — Formula rendering
-* **Accessibility.md** — Accessibility requirements
-
-Together, these standards establish a consistent engineering approach across the Physics Learning ecosystem.
+Closest companions: `Architecture-Enforcement.md`, `Folder-Structure.md`, `Naming-Conventions.md`, and `Physics-Standards.md`.
 
 ---
 

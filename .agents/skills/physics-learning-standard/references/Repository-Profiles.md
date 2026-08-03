@@ -53,6 +53,9 @@ All repositories, regardless of profile, SHOULD include:
 - Documentation that matches the actual repository.
 - Clear ownership or maintainer information.
 - Any applicable accessibility considerations.
+- Any applicable language, locale, or bilingual text considerations.
+- Any applicable learner data, privacy, or security considerations.
+- Any applicable performance considerations for interactive or submission flows.
 - Any applicable AI agent notes.
 
 Fields or sections that do not apply SHOULD be marked as `Not applicable` rather than invented.
@@ -94,6 +97,8 @@ Expected documentation:
 - Usage instructions.
 - Validation checklist.
 - Accessibility notes.
+- Language or locale notes when learner-facing text is bilingual or locale-sensitive.
+- Learner data and privacy notes when assessments collect or store learner information.
 - References.
 
 Expected validation focus:
@@ -107,8 +112,10 @@ Expected validation focus:
 - Practice or quiz correctness.
 - Dynamic quiz behavior follows `Dynamic-Quiz-System-Rules.md` when randomized or roll-number based quizzes exist.
 - Timed or scored exam behavior follows `Timed-Exam-System-Rules.md` when exam mode exists.
+- Learner data handling follows `Security-and-Privacy.md` when identity, answers, scores, exports, or submissions are collected.
 - Numerical tolerance when applicable.
 - Accessibility and readability.
+- Language and encoding follow `Internationalization-and-Localization.md` when Thai-English or bilingual text is used.
 
 Not every `learning-unit` repository needs complex source structure, but it must clearly document how it is organized.
 
@@ -134,6 +141,7 @@ Expected documentation:
 - User controls.
 - Expected behavior.
 - Accessibility and motion considerations.
+- Performance expectations when rendering, animation, or computation can affect usability.
 
 Expected validation focus:
 
@@ -146,6 +154,7 @@ Expected validation focus:
 - Timed or scored assessment behavior follows `Timed-Exam-System-Rules.md` when exam mode is included.
 - Animation supports learning and does not distract unnecessarily.
 - The simulation is usable on supported screen sizes.
+- Runtime and rendering performance follow `Performance-Standards.md` when animation, Canvas, assets, or heavy calculations are involved.
 
 ---
 
@@ -168,6 +177,7 @@ Expected documentation:
 - Examples.
 - Compatibility notes.
 - Testing expectations.
+- Security and privacy notes when examples, telemetry, or consumer applications handle learner data.
 
 Expected validation focus:
 
@@ -208,6 +218,7 @@ Expected validation focus:
 - Unit consistency.
 - Constants and notation follow `Units-and-Notation.md`.
 - Numerical tolerance follows `Simulation-Standards.md` when approximate results are produced.
+- Performance expectations follow `Performance-Standards.md` when calculations are large, iterative, or used by simulations.
 - No dependency on UI, Canvas, DOM, browser storage, or rendering frameworks.
 
 This profile has the strictest architecture boundary expectations.
@@ -234,6 +245,7 @@ Expected documentation:
 - Governance or update process when applicable.
 - License scope.
 - References.
+- Language, localization, or encoding policy when documentation is bilingual.
 
 Expected validation focus:
 
@@ -267,6 +279,8 @@ Expected documentation:
 - Required environment.
 - Safety notes.
 - Validation behavior.
+- Security, privacy, and destructive-operation behavior.
+- Performance expectations when the tool validates large repositories or runs long checks.
 
 Expected validation focus:
 
@@ -297,21 +311,8 @@ Timed Exam System: Not applicable. This repository is a shared formula library a
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `README-Template.md`
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Timed-Exam-System-Rules.md`
-- `Validation-Workflow.md`
-- `Architecture-Enforcement.md`
-- `Standard-Compliance-Checklist.md`
-- `Folder-Structure.md`
-- `Architecture.md`
-- `AI-Agent-Rules.md`
+Closest companions: `README-Template.md`, `Standard-Compliance-Checklist.md`, `Folder-Structure.md`, and `Validation-Workflow.md`.
 
-Profiles explain which expectations apply.
-
-The compliance checklist explains how to verify them.
+Profiles explain which expectations apply; the compliance checklist explains how to verify them.

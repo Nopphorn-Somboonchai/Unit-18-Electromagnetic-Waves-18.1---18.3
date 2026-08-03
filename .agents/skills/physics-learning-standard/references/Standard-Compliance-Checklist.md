@@ -69,10 +69,14 @@ These checks apply to every repository unless clearly marked `Not applicable`.
 | Naming | Files, folders, and code names follow `Naming-Conventions.md`. | [Pass / Partial / Fail / Not applicable] | |
 | Coding standards | Production code follows `Coding-Standards.md` when code exists. | [Pass / Partial / Fail / Not applicable] | |
 | Accessibility | Accessibility considerations are documented when learners interact with the repository. | [Pass / Partial / Fail / Not applicable] | |
+| Internationalization | Primary language, bilingual labels, locale formatting, and encoding follow `Internationalization-and-Localization.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Security and privacy | Learner data, input handling, storage, export, submission, and secrets follow `Security-and-Privacy.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Performance | Simulations, Canvas rendering, dynamic generation, assets, and assessment submission follow `Performance-Standards.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | AI guidance | AI agent instructions are present or referenced. | [Pass / Partial / Fail / Not applicable] | |
 | Third-party content | Third-party materials are identified and not incorrectly relicensed. | [Pass / Partial / Fail / Not applicable] | |
 | Validation | README or docs explain how the repository was validated. | [Pass / Partial / Fail / Not applicable] | |
 | Validation workflow | Validation follows `Validation-Workflow.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Automation preflight | `scripts/validate-repository.ps1` runs from the standard repository when practical, or the reason it was not run is documented. | [Pass / Partial / Fail / Not applicable] | |
 | Physics standards | Physics content follows `Physics-Standards.md` when physics content exists. | [Pass / Partial / Fail / Not applicable] | |
 | Units and notation | Units, symbols, and formulas follow `Units-and-Notation.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Dynamic quiz rules | Dynamic quizzes follow `Dynamic-Quiz-System-Rules.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
@@ -96,7 +100,10 @@ Use this checklist when the primary profile is `learning-unit`.
 | Architecture boundaries | Physics logic is separated from UI, Canvas, storage, and formula rendering where practical. | [Pass / Partial / Fail / Not applicable] | |
 | Practice correctness | Practice or quiz answers are calculated from formulas when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Dynamic quiz system | Roll-number based or randomized quizzes follow `Dynamic-Quiz-System-Rules.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Dynamic quiz fallback | Dynamic quiz generators document `maxRetries`, retry exhaustion behavior, learner message, and review logging when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Timed exam system | Timed or scored exams document start screen, learner identity, timing, scoring, locking, and result data rules. | [Pass / Partial / Fail / Not applicable] | |
+| Timed exam recovery | Timed or scored exams document local persistence, recovery flow, sync/export behavior, and submission state after offline or interrupted attempts. | [Pass / Partial / Fail / Not applicable] | |
+| Timed exam security | Timed or scored exams document data minimization, input validation, tamper limits, privacy notes, and sync/export review behavior. | [Pass / Partial / Fail / Not applicable] | |
 | Numerical tolerance | Numerical answer checking documents tolerance when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Feedback quality | Feedback supports learning rather than only reporting correct or incorrect. | [Pass / Partial / Fail / Not applicable] | |
 | References | Textbooks, curricula, or learning sources are cited clearly. | [Pass / Partial / Fail / Not applicable] | |
@@ -118,8 +125,11 @@ Use this checklist when the primary profile is `interactive-simulation`.
 | Randomness | Randomized behavior is constrained and documented. | [Pass / Partial / Fail / Not applicable] | |
 | Validation cases | Simulation includes known cases or expected behavior checks. | [Pass / Partial / Fail / Not applicable] | |
 | Dynamic quiz behavior | Dynamic quiz behavior follows `Dynamic-Quiz-System-Rules.md` when the simulation includes randomized quiz questions. | [Pass / Partial / Fail / Not applicable] | |
+| Dynamic quiz fallback | Dynamic quiz generators document `maxRetries`, retry exhaustion behavior, learner message, and review logging when randomized questions are included. | [Pass / Partial / Fail / Not applicable] | |
 | Timed exam behavior | Timed or scored assessment behavior follows `Timed-Exam-System-Rules.md` when the simulation includes exam mode. | [Pass / Partial / Fail / Not applicable] | |
+| Timed exam recovery | Exam mode documents recovery, timer continuity, local persistence, and sync/export status for interrupted attempts when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Rendering role | Canvas or visual code displays state and does not define physics truth. | [Pass / Partial / Fail / Not applicable] | |
+| Performance | Rendering loops, generated values, assets, and responsiveness follow `Performance-Standards.md` when they affect usability. | [Pass / Partial / Fail / Not applicable] | |
 | Motion accessibility | Animation supports learning and avoids unnecessary distraction. | [Pass / Partial / Fail / Not applicable] | |
 | Responsive behavior | Simulation remains usable on supported screen sizes. | [Pass / Partial / Fail / Not applicable] | |
 | Validation | Expected behavior is checked against known physics cases. | [Pass / Partial / Fail / Not applicable] | |
@@ -138,6 +148,7 @@ Use this checklist when the primary profile is `shared-library`.
 | Boundary scope | Library documents whether it is domain-safe, adapter-specific, or utility-only. | [Pass / Partial / Fail / Not applicable] | |
 | Tests | Reusable behavior is covered by tests when practical. | [Pass / Partial / Fail / Not applicable] | |
 | Dependency clarity | Dependencies are documented and justified. | [Pass / Partial / Fail / Not applicable] | |
+| Security and privacy | Examples, telemetry, or consuming applications do not expose learner data or secrets. | [Pass / Partial / Fail / Not applicable] | |
 | Versioning | Public behavior changes are documented. | [Pass / Partial / Fail / Not applicable] | |
 
 ---
@@ -158,6 +169,7 @@ Use this checklist when the primary profile is `physics-engine`.
 | Determinism | Calculations are deterministic unless randomness is intentionally documented. | [Pass / Partial / Fail / Not applicable] | |
 | Edge cases | Tests cover important edge cases and invalid inputs. | [Pass / Partial / Fail / Not applicable] | |
 | API stability | Public calculation APIs are clear and documented. | [Pass / Partial / Fail / Not applicable] | |
+| Performance | Large, iterative, or simulation-facing calculations document performance expectations when applicable. | [Pass / Partial / Fail / Not applicable] | |
 
 ---
 
@@ -174,6 +186,7 @@ Use this checklist when the primary profile is `documentation-only`.
 | Standard validation | Standard repository validation runs or is documented when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Architecture guidance | Architecture guidance references enforcement rules when implementation guidance is discussed. | [Pass / Partial / Fail / Not applicable] | |
 | License scope | Original and third-party materials are clearly separated. | [Pass / Partial / Fail / Not applicable] | |
+| Language and encoding | Bilingual documentation and Thai text follow `Internationalization-and-Localization.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Consistency | Standards do not contradict each other. | [Pass / Partial / Fail / Not applicable] | |
 
 ---
@@ -188,6 +201,8 @@ Use this checklist when the primary profile is `utility-package`.
 | Commands | README documents commands or usage steps. | [Pass / Partial / Fail / Not applicable] | |
 | Inputs and outputs | Tool inputs, outputs, and generated files are documented. | [Pass / Partial / Fail / Not applicable] | |
 | Safety | Destructive or file-changing behavior is documented and guarded. | [Pass / Partial / Fail / Not applicable] | |
+| Security and privacy | Secrets, learner data, and privacy-sensitive inputs are handled according to `Security-and-Privacy.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
+| Performance | Long-running validation, large repositories, or expensive checks document expected runtime when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Validation behavior | Tool validation behavior follows or references `Validation-Workflow.md` when applicable. | [Pass / Partial / Fail / Not applicable] | |
 | Error messages | Expected errors are understandable and actionable. | [Pass / Partial / Fail / Not applicable] | |
 | Tests | Important tool behavior is tested when practical. | [Pass / Partial / Fail / Not applicable] | |
@@ -240,20 +255,6 @@ Date: [YYYY-MM-DD]
 
 # Relationship to Other Standards
 
-Use this checklist together with:
+Full standards index: `README.md`.
 
-- `Repository-Profiles.md`
-- `README-Template.md`
-- `Architecture.md`
-- `Architecture-Enforcement.md`
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Timed-Exam-System-Rules.md`
-- `Validation-Workflow.md`
-- `Folder-Structure.md`
-- `Coding-Standards.md`
-- `Naming-Conventions.md`
-- `Accessibility.md`
-- `AI-Agent-Rules.md`
+Closest companions: `Repository-Profiles.md`, `README-Template.md`, `Architecture-Enforcement.md`, `Validation-Workflow.md`, and profile-specific domain standards.

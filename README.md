@@ -5,6 +5,14 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)](#)
 
+| Metadata | Value |
+| :--- | :--- |
+| Repository profile | `learning-unit` |
+| Standard version | `1.13.0` |
+| Compliance status | `Compliant` |
+| Maintainer | Nopphorn Somboonchai |
+| Standard reference | [physics-learning-standard](https://github.com/Nopphorn-Somboonchai/physics-learning-standard) |
+
 > [!NOTE]
 > 🏛️ **Architecture Reference Implementation**  
 > Repository นี้ถูกออกแบบให้เป็น **Reference Implementation (โครงสร้างอ้างอิงมาตรฐาน)** สำหรับสื่อการเรียนรู้แบบโต้ตอบในระบบนิเวศการศึกษาวิชาฟิสิกส์ โดยใช้ **บทที่ 18 คลื่นแม่เหล็กไฟฟ้า (หัวข้อ 18.1 - 18.3)** เป็นหัวข้อตั้งต้น เพื่อเป็นต้นแบบเชิงสถาปัตยกรรมซอฟต์แวร์ (Architectural Blueprint) สำหรับการพัฒนา Repository ในหัวข้อการเรียนรู้อื่นๆ ในอนาคต
@@ -29,7 +37,7 @@
 
 ---
 
-## 📖 Project Overview & Learning Objectives
+# 📖 Project Overview & Learning Objectives
 
 โปรเจกต์สื่อการสอนแบบโต้ตอบ (Interactive Web Application) ออกแบบมาเพื่อช่วยให้นักเรียนระดับชั้นมัธยมศึกษาปีที่ 6 เข้าใจทฤษฎีและปรากฏการณ์ของ **คลื่นแม่เหล็กไฟฟ้า (Electromagnetic Waves)** ในหัวข้อ **18.1 การเกิดคลื่นแม่เหล็กไฟฟ้า**, **18.2 สเปกตรัมของคลื่นแม่เหล็กไฟฟ้า**, และ **18.3 โพลาไรเซชันของคลื่นแม่เหล็กไฟฟ้า** ได้แก่ การเหนี่ยวนำข้ามระหว่างสนามไฟฟ้าและสนามแม่เหล็กตามแนวคิดของแมกซ์เวลล์ ($E \perp B \perp v$), อัตราเร็วคลื่นแม่เหล็กไฟฟ้า ($c = f\lambda = 3 \times 10^8 \text{ m/s}$), สเปกตรัมของคลื่นแม่เหล็กไฟฟ้า 7 ช่วงความถี่ (คลื่นวิทยุ, ไมโครเวฟ, อินฟราเรด, แสง, อัลตราไวโอเลต, รังสีเอกซ์, รังสีแกมมา), แสงไม่โพลาไรส์และแสงโพลาไรส์เชิงเส้น ตลอดจนกฎของมาลุส ($I = I_0 \cos^2\theta$) ผ่านการจำลองภาพเสมือนจริง (Virtual Simulation) การฝึกทำโจทย์สุ่มแปรผันตามเลขที่ และระบบสอบเก็บคะแนนแบบจับเวลา
 
@@ -46,6 +54,13 @@
 3. **เชิงปฏิบัติการ**: 
    - วิเคราะห์และสังเกตทิศทางของสนามไฟฟ้า ($\vec{E}$), สนามแม่เหล็ก ($\vec{B}$), และทิศทางการเคลื่อนที่ ($\vec{v}$) ตามกฎมือขวา ผ่านเครื่องมือจำลองภาพเสมือนจริง (Virtual Simulator)
    - สำรวจพฤติกรรมและการเปลี่ยนแปลงความเข้มของแสงเมื่อผ่านแผ่นโพลารอยด์ที่ปรับทำมุมต่าง ๆ ($0^\circ - 360^\circ$)
+
+### 🔬 Physics Scope & Key Formulas
+
+- **อัตราเร็วคลื่นแม่เหล็กไฟฟ้า**: $c = f\lambda = 3 \times 10^8 \text{ m/s}$ (สุญญากาศ)
+- **พลังงานของโฟตอน**: $E = hf = \frac{hc}{\lambda}$ ($h = 6.626 \times 10^{-34} \text{ J}\cdot\text{s}$)
+- **ความเข้มแสงโพลาไรส์ (กฎของมาลุส)**: $I = I_0 \cos^2\theta$
+- **ความยาวสายอากาศเสาอากาศ**: $L = \frac{\lambda}{2}$ หรือ $L = \frac{\lambda}{4}$
 
 [🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
 
@@ -121,7 +136,7 @@
 
 ---
 
-## 📁 Project Structure & Folder Responsibilities
+# 📁 Project Structure & Folder Responsibilities
 
 ### 1. โครงสร้างไฟล์ปัจจุบัน (Current Implementation)
 ปัจจุบันโปรเจกต์ถูกจัดเก็บในรูปแบบ Single-Page Application (SPA) / Flat Directory เพื่อความสะดวกในการเปิดใช้งานได้ทันทีโดยไม่ต้องผ่านกระบวนการ Build:
@@ -230,7 +245,7 @@ src/
 
 ---
 
-## ✨ Features & Interactive Modules
+# ✨ Learning Features & Interactive Modules
 
 ### 1. 📖 ระบบทบทวนบทเรียนและเครื่องมือจำลอง (Interactive Review & Physics Simulators)
 
@@ -374,3 +389,20 @@ src/
 * **Repository**: [Unit-18-Electromagnetic-Waves-18.1---18.3](https://github.com/Nopphorn-Somboonchai/Unit-18-Electromagnetic-Waves-18.1---18.3)
 
 [🔝 กลับไปที่สารบัญ](#-สารบัญ-table-of-contents)
+
+---
+
+# 🧪 Validation & Automated Testing
+
+This repository includes automated compliance validation scripts adhering to [physics-learning-standard](https://github.com/Nopphorn-Somboonchai/physics-learning-standard) v1.13.0.
+
+To run automated checks:
+```powershell
+pwsh -ExecutionPolicy Bypass -File ".agents/skills/physics-learning-standard/scripts/validate-repository.ps1" -Target "." -StandardRoot ".agents/skills/physics-learning-standard/references"
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

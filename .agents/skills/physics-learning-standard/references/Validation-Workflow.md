@@ -70,10 +70,28 @@ It includes:
 - Document `Pass`, `Partial`, `Fail`, or `Not applicable` for applicable checks.
 - Record the compliance result in the repository README.
 - Document justified exceptions.
+- Review `Internationalization-and-Localization.md`,
+  `Security-and-Privacy.md`, and `Performance-Standards.md` items when
+  applicable.
 
 This level is mostly human-readable and does not require automation.
 
 Automation may support the review, but it should not replace human judgment.
+
+The standard repository provides a lightweight child repository validator for
+basic preflight checks:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/validate-repository.ps1 -Target path/to/child-repository
+```
+
+This validator is read-only. It checks README profile evidence, standard
+version fields, compliance status fields, profile-specific documentation hints,
+and basic source boundary rules for `src/physics/` and `src/application/`.
+
+Passing this script means the repository has basic compliance evidence. It does
+not replace the profile checklist, physics review, accessibility review, or
+repository-specific tests.
 
 ---
 
@@ -92,6 +110,9 @@ Examples:
 - Check simulation validation cases.
 - Check dynamic quiz parameter generation, attempt consistency, and answer validation.
 - Check timed exam start screens, identity validation, timing, lock behavior, scoring, and submitted result data.
+- Check learner data handling, input validation, privacy, export, submission, and secrets when applicable.
+- Check primary UI language, bilingual labels, locale formatting, and encoding when applicable.
+- Check simulation, rendering, dynamic generation, asset loading, and submission performance when applicable.
 - Check accessibility.
 - Check responsive behavior.
 - Check that documentation matches the actual implementation.
@@ -106,13 +127,18 @@ The standard repository provides:
 
 ```text
 scripts/validate-standard.ps1
+scripts/validate-repository.ps1
 ```
 
-This script is intentionally lightweight.
+These scripts are intentionally lightweight.
 
-It validates the structure and consistency of this standard repository.
+`validate-standard.ps1` validates the structure and consistency of this standard
+repository.
 
-It does not validate every child repository automatically.
+`validate-repository.ps1` validates one selected child repository when a target
+path is provided.
+
+The scripts do not validate every child repository automatically.
 
 ## What the Script Checks
 
@@ -127,6 +153,21 @@ It does not validate every child repository automatically.
 - ADR files are listed in `adr/README.md`.
 - Markdown code fences are balanced.
 - Obsolete references such as old `docs/...` paths are not present.
+- Child repository validation automation is documented and referenced.
+
+## What the Child Repository Script Checks
+
+- `README.md` exists and is not empty.
+- README declares one supported repository profile.
+- README references `physics-learning-standard`.
+- README declares a standard version or marks it `Not applicable`.
+- README declares a compliance status.
+- README identifies maintainer, structure, validation, and license information.
+- Profile-specific README evidence is present.
+- `src/physics/` avoids DOM, Canvas, storage, and network APIs.
+- `src/application/` avoids DOM, Canvas, and concrete browser storage APIs.
+- `physics-engine` repositories avoid browser, storage, rendering, and network
+  APIs under `src/`.
 
 ## What the Script Does Not Check
 
@@ -138,7 +179,11 @@ The script does not replace review for:
 - Accessibility behavior in a browser.
 - Simulation accuracy beyond documented static checks.
 - Third-party content licensing.
+- Security, privacy, PDPA, or institutional policy decisions.
+- Performance on every possible device or network.
+- Translation quality for learner-facing physics content.
 - Repository-specific build or test commands.
+- Final profile compliance decisions for child repositories.
 
 Those checks still require human review and repository-specific validation.
 
@@ -224,19 +269,6 @@ AI agents should not:
 
 # Relationship to Other Standards
 
-Use this document together with:
+Full standards index: `README.md`.
 
-- `VERSION.md`
-- `CHANGELOG.md`
-- `Decision-Records.md`
-- `Repository-Profiles.md`
-- `Standard-Compliance-Checklist.md`
-- `Architecture-Enforcement.md`
-- `Physics-Standards.md`
-- `Units-and-Notation.md`
-- `Simulation-Standards.md`
-- `Dynamic-Quiz-System-Rules.md`
-- `Timed-Exam-System-Rules.md`
-- `README-Template.md`
-- `AI-Agent-Rules.md`
-- `AGENTS.md`
+Closest companions: `VERSION.md`, `CHANGELOG.md`, `Decision-Records.md`, `Repository-Profiles.md`, `Standard-Compliance-Checklist.md`, and `README-Template.md`.

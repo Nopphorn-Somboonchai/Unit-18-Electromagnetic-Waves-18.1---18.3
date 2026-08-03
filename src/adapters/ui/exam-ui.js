@@ -30,9 +30,21 @@ export class ExamUIAdapter {
     // Bind Reload & Unload Protection (F5, Ctrl+R, beforeunload)
     this.setupReloadProtection();
 
-    // Check if saved result exists in LocalStorage
+    // Check if active session or saved result exists in LocalStorage
+    const savedSession = LocalStorageAdapter.loadExamSession();
     const savedResult = LocalStorageAdapter.loadExamResult();
-    if (savedResult) {
+
+    if (savedSession) {
+      const resumed = this.examManager.resumeExamSession(savedSession);
+      if (resumed) {
+        this.activeQuestionIdx = this.examManager.restoredActiveQuestionIdx || 0;
+      } else if (savedResult) {
+        this.examManager.examResult = savedResult;
+        this.renderState(EXAM_STATES.REVIEW, savedResult);
+      } else {
+        this.renderState(EXAM_STATES.IDLE);
+      }
+    } else if (savedResult) {
       this.examManager.examResult = savedResult;
       this.renderState(EXAM_STATES.REVIEW, savedResult);
     } else {
@@ -77,10 +89,10 @@ export class ExamUIAdapter {
     // Intercept browser reload / tab close / window unload
     window.addEventListener('beforeunload', (e) => {
       if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-        // Auto-submit current exam immediately before unloading to prevent exam reset
-        this.examManager.submitExam(true);
+        // Save current session state before unloading
+        this.examManager._saveSessionState(this.activeQuestionIdx);
 
-        const warningMsg = '⚠️ คุณกำลังจะพยายามทุจริตการสอบ! หากคุณรีโหลดหรือออกจากหน้านี้ ข้อสอบของคุณจะถูกส่งและยุติการสอบทันที!';
+        const warningMsg = '⚠️ คุณกำลังทำข้อสอบค้างอยู่! หากคุณรีโหลดหรือออกจากหน้านี้ ระบบจะฟื้นฟูข้อสอบเดิมและนับเวลาถอยหลังต่อตามจริง';
         e.preventDefault();
         e.returnValue = warningMsg;
         return warningMsg;
@@ -416,6 +428,7 @@ export class ExamUIAdapter {
     qPills.forEach((btn) => {
       btn.addEventListener('click', () => {
         this.activeQuestionIdx = parseInt(btn.getAttribute('data-idx'), 10);
+        this.examManager._saveSessionState(this.activeQuestionIdx);
         this.renderActiveExamView();
       });
     });
@@ -423,7 +436,7 @@ export class ExamUIAdapter {
     const choiceInputs = this.container.querySelectorAll('input[name="exam-choice"]');
     choiceInputs.forEach((radio) => {
       radio.addEventListener('change', (e) => {
-        this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value);
+        this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value, this.activeQuestionIdx);
         this.renderActiveExamView();
       });
     });
@@ -431,7 +444,7 @@ export class ExamUIAdapter {
     const numericInput = this.container.querySelector('#input-exam-numeric');
     if (numericInput) {
       numericInput.addEventListener('input', (e) => {
-        this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value);
+        this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value, this.activeQuestionIdx);
       });
     }
 
@@ -440,6 +453,7 @@ export class ExamUIAdapter {
       btnPrev.addEventListener('click', () => {
         if (this.activeQuestionIdx > 0) {
           this.activeQuestionIdx--;
+          this.examManager._saveSessionState(this.activeQuestionIdx);
           this.renderActiveExamView();
         }
       });
@@ -450,6 +464,7 @@ export class ExamUIAdapter {
       btnNext.addEventListener('click', () => {
         if (this.activeQuestionIdx < 4) {
           this.activeQuestionIdx++;
+          this.examManager._saveSessionState(this.activeQuestionIdx);
           this.renderActiveExamView();
         }
       });
