@@ -6,7 +6,7 @@
 
 import { APP_CONFIG } from '../shared/config.js';
 import { validateRollNumber, validateNumericAnswer } from '../utils/validation.js';
-import { getSeededInt, getSeededChoice, getDynamicParam } from '../utils/random.js';
+import { getSeededInt, getSeededChoice, getSeededShuffle, getDynamicParam } from '../utils/random.js';
 import { calculateWavelength, calculateFrequency } from '../physics/em-wave-engine.js';
 import { calculatePhotonEnergy, getSpectrumInfo } from '../physics/spectrum-solver.js';
 import { calculateMalusIntensity } from '../physics/polarization-solver.js';
@@ -43,6 +43,9 @@ export class ExamManager {
     this.questions = [];
     this.userAnswers = {};
     this.examResult = null;
+    this.restoredActiveQuestionIdx = 0;
+    this.isRecoveredSession = false;
+    this.recoveredAt = null;
 
     this.onTickCallback = null;
     this.onStateChangeCallback = null;
@@ -72,10 +75,6 @@ export class ExamManager {
    * Start new 15-minute exam session
    * @param {number} [customSeed=null] - Optional attempt seed for testing/reproducibility
    */
-  /**
-   * Start new 15-minute exam session
-   * @param {number} [customSeed=null] - Optional attempt seed for testing/reproducibility
-   */
   startExam(customSeed = null) {
     this.state = EXAM_STATES.IN_PROGRESS;
     this.timeRemaining = this.durationSeconds;
@@ -83,6 +82,9 @@ export class ExamManager {
     this.endTime = this.startTime + (this.durationSeconds * 1000);
     this.userAnswers = {};
     this.examResult = null;
+    this.restoredActiveQuestionIdx = 0;
+    this.isRecoveredSession = false;
+    this.recoveredAt = null;
     this.attemptSeed = customSeed !== null ? customSeed : ((Date.now() ^ Math.floor(Math.random() * 100000)) >>> 0);
 
     // Clear any previous exam result when starting a new attempt
@@ -110,16 +112,26 @@ export class ExamManager {
    */
   _saveSessionState(activeQuestionIdx = 0) {
     if (this.state !== EXAM_STATES.IN_PROGRESS) return;
+
+    const lastQuestionIdx = Math.max(0, this.questions.length - 1);
+    const normalizedQuestionIdx = Math.min(
+      lastQuestionIdx,
+      Math.max(0, Number.parseInt(activeQuestionIdx, 10) || 0)
+    );
+
     LocalStorageAdapter.saveExamSession({
+      status: 'in-progress',
       fullName: this.fullName,
       className: this.className,
       rollNumber: this.rollNumber,
       attemptSeed: this.attemptSeed,
       startTime: this.startTime,
       endTime: this.endTime,
+      durationSeconds: this.durationSeconds,
+      lastSavedAt: Date.now(),
       questions: this.questions,
       userAnswers: this.userAnswers,
-      activeQuestionIdx: activeQuestionIdx
+      activeQuestionIdx: normalizedQuestionIdx
     });
   }
 
@@ -129,20 +141,40 @@ export class ExamManager {
    * @returns {boolean} Success status
    */
   resumeExamSession(sessionData) {
-    if (!sessionData) return false;
+    if (!sessionData || !Array.isArray(sessionData.questions) || sessionData.questions.length === 0) {
+      return false;
+    }
+
+    const savedStartTime = Number(sessionData.startTime);
+    const savedDurationSeconds = Number(sessionData.durationSeconds);
+    const durationSeconds = Number.isFinite(savedDurationSeconds) && savedDurationSeconds > 0
+      ? savedDurationSeconds
+      : this.durationSeconds;
+    const savedEndTime = Number(sessionData.endTime);
+
+    if (!Number.isFinite(savedStartTime)) {
+      return false;
+    }
 
     this.fullName = sessionData.fullName || this.fullName;
     this.className = sessionData.className || this.className;
     this.rollNumber = sessionData.rollNumber || this.rollNumber;
     this.attemptSeed = sessionData.attemptSeed || 0;
-    this.startTime = sessionData.startTime || Date.now();
-    this.endTime = sessionData.endTime || (this.startTime + this.durationSeconds * 1000);
-    this.questions = sessionData.questions || [];
+    this.durationSeconds = durationSeconds;
+    this.startTime = savedStartTime;
+    this.endTime = Number.isFinite(savedEndTime)
+      ? savedEndTime
+      : this.startTime + (this.durationSeconds * 1000);
+    this.questions = sessionData.questions;
     this.userAnswers = sessionData.userAnswers || {};
-    this.restoredActiveQuestionIdx = sessionData.activeQuestionIdx || 0;
+    this.restoredActiveQuestionIdx = Math.min(
+      this.questions.length - 1,
+      Math.max(0, Number.parseInt(sessionData.activeQuestionIdx, 10) || 0)
+    );
+    this.isRecoveredSession = true;
+    this.recoveredAt = Date.now();
 
-    const now = Date.now();
-    const timeRemainingSeconds = Math.round((this.endTime - now) / 1000);
+    const timeRemainingSeconds = this._calculateTimeRemaining();
 
     if (timeRemainingSeconds <= 0) {
       this.state = EXAM_STATES.IN_PROGRESS;
@@ -153,6 +185,7 @@ export class ExamManager {
 
     this.state = EXAM_STATES.IN_PROGRESS;
     this.timeRemaining = timeRemainingSeconds;
+    this._saveSessionState(this.restoredActiveQuestionIdx);
     this._startTimer();
 
     if (this.onStateChangeCallback) {
@@ -169,17 +202,39 @@ export class ExamManager {
     if (this.timerInterval) clearInterval(this.timerInterval);
 
     this.timerInterval = setInterval(() => {
-      this.timeRemaining--;
-
-      if (this.onTickCallback) {
-        this.onTickCallback(this.timeRemaining, this.formatTimerString());
-      }
-
-      // Auto-submit when time expires
-      if (this.timeRemaining <= 0) {
-        this.submitExam(true);
-      }
+      this.syncTimeRemaining();
     }, 1000);
+  }
+
+  /**
+   * Recalculate the countdown from the persisted deadline.
+   * This prevents refreshes, background throttling, or delayed intervals from granting extra time.
+   * @returns {number} Remaining whole seconds
+   */
+  syncTimeRemaining() {
+    if (this.state !== EXAM_STATES.IN_PROGRESS) return this.timeRemaining;
+
+    this.timeRemaining = this._calculateTimeRemaining();
+
+    if (this.onTickCallback) {
+      this.onTickCallback(this.timeRemaining, this.formatTimerString());
+    }
+
+    if (this.timeRemaining <= 0) {
+      this.submitExam(true);
+    }
+
+    return this.timeRemaining;
+  }
+
+  /**
+   * Calculate remaining exam time from the original deadline.
+   * @returns {number} Remaining whole seconds
+   */
+  _calculateTimeRemaining() {
+    const millisecondsRemaining = this.endTime - Date.now();
+    const secondsRemaining = Math.ceil(millisecondsRemaining / 1000);
+    return Math.min(this.durationSeconds, Math.max(0, secondsRemaining));
   }
 
   /**
@@ -334,14 +389,23 @@ export class ExamManager {
     ];
 
     const selectedTheory = getSeededChoice(R, 1, theoryPool, B);
+    const shuffledTheoryChoices = getSeededShuffle(
+      R,
+      101,
+      selectedTheory.choices.map((choiceText, originalIdx) => ({
+        choiceText,
+        isCorrect: originalIdx === selectedTheory.correctChoiceIndex
+      })),
+      B
+    );
     const q1 = {
       id: 'exam_q1',
       type: 'choice',
       topic: '18.1 ทฤษฎีคลื่นแม่เหล็กไฟฟ้า',
       title: 'ข้อ 1: ทฤษฎีคลื่นแม่เหล็กไฟฟ้า',
       problemText: selectedTheory.problemText,
-      choices: selectedTheory.choices,
-      correctChoiceIndex: selectedTheory.correctChoiceIndex,
+      choices: shuffledTheoryChoices.map(({ choiceText }) => choiceText),
+      correctChoiceIndex: shuffledTheoryChoices.findIndex(({ isCorrect }) => isCorrect),
       solutionSteps: [`**คำอธิบาย**: ${selectedTheory.explanation}`]
     };
 

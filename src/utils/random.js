@@ -69,6 +69,31 @@ export function getSeededChoice(rollNumber, questionIndex, array, attemptSeed = 
 }
 
 /**
+ * Return a deterministically shuffled copy of an array for one exam attempt.
+ * The input array is never mutated.
+ * @template T
+ * @param {number} rollNumber - Student roll number R (1..40)
+ * @param {number} questionIndex - Stable question identifier used for the shuffle seed
+ * @param {T[]} array - Values to shuffle
+ * @param {number} [attemptSeed=0] - Session/Attempt seed B
+ * @returns {T[]} Shuffled copy
+ */
+export function getSeededShuffle(rollNumber, questionIndex, array, attemptSeed = 0) {
+  if (!Array.isArray(array)) return [];
+
+  const shuffled = [...array];
+  const seed = (rollNumber * 10007 + questionIndex * 9973 + attemptSeed * 1013 + 24680) >>> 0;
+  const rng = createSeededRNG(seed);
+
+  for (let idx = shuffled.length - 1; idx > 0; idx--) {
+    const swapIdx = Math.floor(rng() * (idx + 1));
+    [shuffled[idx], shuffled[swapIdx]] = [shuffled[swapIdx], shuffled[idx]];
+  }
+
+  return shuffled;
+}
+
+/**
  * Dynamic Parameter Generator:
  * Combines Roll Number R (1..40) with non-deterministic random variation (attemptSeed / B)
  * and applies strict safety constraints to guarantee physically sound parameters.

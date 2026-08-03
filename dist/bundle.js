@@ -48,6 +48,7 @@
     // LocalStorage Keys
     storageKeys: {
       examResult: "unit18_exam_result",
+      examSession: "unit18_exam_session",
       userRollNumber: "unit18_user_roll_number",
       themePreference: "unit18_theme"
     }
@@ -1234,12 +1235,38 @@
   var TabNavigatorAdapter = class {
     static isExamInProgress = false;
     /**
-     * Set exam protection lock state
+     * Set exam protection lock state and switch to exam tab if active
      * @param {boolean} inProgress
      */
     static setExamInProgress(inProgress) {
       this.isExamInProgress = !!inProgress;
       this.updateTabLockUI();
+      if (this.isExamInProgress) {
+        this.switchToTab("tab-exam");
+      }
+    }
+    /**
+     * Switch active tab view programmatically
+     * @param {string} targetTabId
+     */
+    static switchToTab(targetTabId) {
+      if (typeof document === "undefined") return;
+      const tabButtons = document.querySelectorAll(".nav-tab-btn");
+      const tabContents = document.querySelectorAll(".tab-content");
+      tabButtons.forEach((b) => {
+        if (b.getAttribute("data-tab") === targetTabId) {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+      tabContents.forEach((content) => {
+        if (content.id === targetTabId) {
+          content.classList.remove("hidden");
+        } else {
+          content.classList.add("hidden");
+        }
+      });
     }
     /**
      * Update visual lock styling on tab buttons
@@ -1294,6 +1321,10 @@
           }
         });
       });
+      if (this.isExamInProgress) {
+        this.switchToTab("tab-exam");
+        this.updateTabLockUI();
+      }
     }
   };
 
@@ -1316,6 +1347,17 @@
     if (!array || array.length === 0) return null;
     const idx = getSeededInt(rollNumber, questionIndex, 0, array.length - 1, attemptSeed);
     return array[idx];
+  }
+  function getSeededShuffle(rollNumber, questionIndex, array, attemptSeed = 0) {
+    if (!Array.isArray(array)) return [];
+    const shuffled = [...array];
+    const seed = rollNumber * 10007 + questionIndex * 9973 + attemptSeed * 1013 + 24680 >>> 0;
+    const rng = createSeededRNG(seed);
+    for (let idx = shuffled.length - 1; idx > 0; idx--) {
+      const swapIdx = Math.floor(rng() * (idx + 1));
+      [shuffled[idx], shuffled[swapIdx]] = [shuffled[swapIdx], shuffled[idx]];
+    }
+    return shuffled;
   }
   function getDynamicParam(rollNumber, baseMin, baseStep, randomRange = 0, safetyBounds = {}, attemptSeed = void 0) {
     const R = Math.max(1, Math.min(40, Number(rollNumber) || 1));
@@ -1854,6 +1896,50 @@
         return false;
       }
     }
+    /**
+     * Save active in-progress exam session to LocalStorage
+     * @param {Object} sessionData - Active exam state and question data
+     * @returns {boolean} Success status
+     */
+    static saveExamSession(sessionData) {
+      try {
+        const key = APP_CONFIG.storageKeys.examSession;
+        const serialized = JSON.stringify(sessionData);
+        localStorage.setItem(key, serialized);
+        return true;
+      } catch (err) {
+        console.warn("[LocalStorageAdapter] Failed to save exam session:", err);
+        return false;
+      }
+    }
+    /**
+     * Load saved active exam session from LocalStorage
+     * @returns {Object|null} Exam session object or null
+     */
+    static loadExamSession() {
+      try {
+        const key = APP_CONFIG.storageKeys.examSession;
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+      } catch (err) {
+        console.warn("[LocalStorageAdapter] Failed to load exam session:", err);
+        return null;
+      }
+    }
+    /**
+     * Clear saved active exam session from LocalStorage
+     * @returns {boolean} Success status
+     */
+    static clearExamSession() {
+      try {
+        const key = APP_CONFIG.storageKeys.examSession;
+        localStorage.removeItem(key);
+        return true;
+      } catch (err) {
+        console.warn("[LocalStorageAdapter] Failed to clear exam session:", err);
+        return false;
+      }
+    }
   };
 
   // src/application/exam-manager.js
@@ -1884,6 +1970,9 @@
       this.questions = [];
       this.userAnswers = {};
       this.examResult = null;
+      this.restoredActiveQuestionIdx = 0;
+      this.isRecoveredSession = false;
+      this.recoveredAt = null;
       this.onTickCallback = null;
       this.onStateChangeCallback = null;
     }
@@ -1913,10 +2002,16 @@
       this.state = EXAM_STATES.IN_PROGRESS;
       this.timeRemaining = this.durationSeconds;
       this.startTime = Date.now();
+      this.endTime = this.startTime + this.durationSeconds * 1e3;
       this.userAnswers = {};
       this.examResult = null;
+      this.restoredActiveQuestionIdx = 0;
+      this.isRecoveredSession = false;
+      this.recoveredAt = null;
       this.attemptSeed = customSeed !== null ? customSeed : (Date.now() ^ Math.floor(Math.random() * 1e5)) >>> 0;
+      LocalStorageAdapter.clearExamResult();
       this.questions = this._generateExamQuestions();
+      this._saveSessionState();
       this._startTimer();
       if (this.onStateChangeCallback) {
         this.onStateChangeCallback(this.state);
@@ -1924,19 +2019,111 @@
       return this.questions;
     }
     /**
+     * Helper to persist current active exam state to storage adapter
+     * @param {number} [activeQuestionIdx=0]
+     */
+    _saveSessionState(activeQuestionIdx = 0) {
+      if (this.state !== EXAM_STATES.IN_PROGRESS) return;
+      const lastQuestionIdx = Math.max(0, this.questions.length - 1);
+      const normalizedQuestionIdx = Math.min(
+        lastQuestionIdx,
+        Math.max(0, Number.parseInt(activeQuestionIdx, 10) || 0)
+      );
+      LocalStorageAdapter.saveExamSession({
+        status: "in-progress",
+        fullName: this.fullName,
+        className: this.className,
+        rollNumber: this.rollNumber,
+        attemptSeed: this.attemptSeed,
+        startTime: this.startTime,
+        endTime: this.endTime,
+        durationSeconds: this.durationSeconds,
+        lastSavedAt: Date.now(),
+        questions: this.questions,
+        userAnswers: this.userAnswers,
+        activeQuestionIdx: normalizedQuestionIdx
+      });
+    }
+    /**
+     * Resume an existing in-progress exam session
+     * @param {Object} sessionData
+     * @returns {boolean} Success status
+     */
+    resumeExamSession(sessionData) {
+      if (!sessionData || !Array.isArray(sessionData.questions) || sessionData.questions.length === 0) {
+        return false;
+      }
+      const savedStartTime = Number(sessionData.startTime);
+      const savedDurationSeconds = Number(sessionData.durationSeconds);
+      const durationSeconds = Number.isFinite(savedDurationSeconds) && savedDurationSeconds > 0 ? savedDurationSeconds : this.durationSeconds;
+      const savedEndTime = Number(sessionData.endTime);
+      if (!Number.isFinite(savedStartTime)) {
+        return false;
+      }
+      this.fullName = sessionData.fullName || this.fullName;
+      this.className = sessionData.className || this.className;
+      this.rollNumber = sessionData.rollNumber || this.rollNumber;
+      this.attemptSeed = sessionData.attemptSeed || 0;
+      this.durationSeconds = durationSeconds;
+      this.startTime = savedStartTime;
+      this.endTime = Number.isFinite(savedEndTime) ? savedEndTime : this.startTime + this.durationSeconds * 1e3;
+      this.questions = sessionData.questions;
+      this.userAnswers = sessionData.userAnswers || {};
+      this.restoredActiveQuestionIdx = Math.min(
+        this.questions.length - 1,
+        Math.max(0, Number.parseInt(sessionData.activeQuestionIdx, 10) || 0)
+      );
+      this.isRecoveredSession = true;
+      this.recoveredAt = Date.now();
+      const timeRemainingSeconds = this._calculateTimeRemaining();
+      if (timeRemainingSeconds <= 0) {
+        this.state = EXAM_STATES.IN_PROGRESS;
+        this.timeRemaining = 0;
+        this.submitExam(true);
+        return false;
+      }
+      this.state = EXAM_STATES.IN_PROGRESS;
+      this.timeRemaining = timeRemainingSeconds;
+      this._saveSessionState(this.restoredActiveQuestionIdx);
+      this._startTimer();
+      if (this.onStateChangeCallback) {
+        this.onStateChangeCallback(this.state);
+      }
+      return true;
+    }
+    /**
      * Countdown timer tick
      */
     _startTimer() {
       if (this.timerInterval) clearInterval(this.timerInterval);
       this.timerInterval = setInterval(() => {
-        this.timeRemaining--;
-        if (this.onTickCallback) {
-          this.onTickCallback(this.timeRemaining, this.formatTimerString());
-        }
-        if (this.timeRemaining <= 0) {
-          this.submitExam(true);
-        }
+        this.syncTimeRemaining();
       }, 1e3);
+    }
+    /**
+     * Recalculate the countdown from the persisted deadline.
+     * This prevents refreshes, background throttling, or delayed intervals from granting extra time.
+     * @returns {number} Remaining whole seconds
+     */
+    syncTimeRemaining() {
+      if (this.state !== EXAM_STATES.IN_PROGRESS) return this.timeRemaining;
+      this.timeRemaining = this._calculateTimeRemaining();
+      if (this.onTickCallback) {
+        this.onTickCallback(this.timeRemaining, this.formatTimerString());
+      }
+      if (this.timeRemaining <= 0) {
+        this.submitExam(true);
+      }
+      return this.timeRemaining;
+    }
+    /**
+     * Calculate remaining exam time from the original deadline.
+     * @returns {number} Remaining whole seconds
+     */
+    _calculateTimeRemaining() {
+      const millisecondsRemaining = this.endTime - Date.now();
+      const secondsRemaining = Math.ceil(millisecondsRemaining / 1e3);
+      return Math.min(this.durationSeconds, Math.max(0, secondsRemaining));
     }
     /**
      * Stop timer
@@ -1961,10 +2148,12 @@
      * Record answer for a question
      * @param {number} questionIndex - 0..4
      * @param {any} answer
+     * @param {number} [activeQuestionIdx=null]
      */
-    recordAnswer(questionIndex, answer) {
+    recordAnswer(questionIndex, answer, activeQuestionIdx = null) {
       if (this.state !== EXAM_STATES.IN_PROGRESS) return;
       this.userAnswers[questionIndex] = answer;
+      this._saveSessionState(activeQuestionIdx !== null ? activeQuestionIdx : questionIndex);
     }
     /**
      * Submit exam and compute final score out of 10
@@ -2019,6 +2208,7 @@
         gradedQuestions
       };
       LocalStorageAdapter.saveExamResult(this.examResult);
+      LocalStorageAdapter.clearExamSession();
       if (this.onStateChangeCallback) {
         this.onStateChangeCallback(this.state, this.examResult);
       }
@@ -2068,14 +2258,23 @@
         }
       ];
       const selectedTheory = getSeededChoice(R, 1, theoryPool, B);
+      const shuffledTheoryChoices = getSeededShuffle(
+        R,
+        101,
+        selectedTheory.choices.map((choiceText, originalIdx) => ({
+          choiceText,
+          isCorrect: originalIdx === selectedTheory.correctChoiceIndex
+        })),
+        B
+      );
       const q1 = {
         id: "exam_q1",
         type: "choice",
         topic: "18.1 \u0E17\u0E24\u0E29\u0E0E\u0E35\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
         title: "\u0E02\u0E49\u0E2D 1: \u0E17\u0E24\u0E29\u0E0E\u0E35\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
         problemText: selectedTheory.problemText,
-        choices: selectedTheory.choices,
-        correctChoiceIndex: selectedTheory.correctChoiceIndex,
+        choices: shuffledTheoryChoices.map(({ choiceText }) => choiceText),
+        correctChoiceIndex: shuffledTheoryChoices.findIndex(({ isCorrect }) => isCorrect),
         solutionSteps: [`**\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22**: ${selectedTheory.explanation}`]
       };
       const pool181 = [
@@ -2291,12 +2490,28 @@
         this.updateTimerDisplay(secondsLeft, timerStr);
       };
       this.examManager.onStateChangeCallback = (state, result) => {
+        if (state === EXAM_STATES.IN_PROGRESS && this.examManager.isRecoveredSession) {
+          this.activeQuestionIdx = this.examManager.restoredActiveQuestionIdx;
+        }
         this.renderState(state, result);
         TabNavigatorAdapter.setExamInProgress(state === EXAM_STATES.IN_PROGRESS);
       };
-      this.setupReloadProtection();
+      this.setupRecoveryPersistence();
+      const savedSession = LocalStorageAdapter.loadExamSession();
       const savedResult = LocalStorageAdapter.loadExamResult();
-      if (savedResult) {
+      if (savedSession) {
+        const resumed = this.examManager.resumeExamSession(savedSession);
+        if (!resumed && (this.examManager.examResult || savedResult)) {
+          const recoveredResult = this.examManager.examResult || savedResult;
+          this.examManager.examResult = recoveredResult;
+          this.renderState(EXAM_STATES.REVIEW, recoveredResult);
+        } else {
+          if (!resumed) {
+            LocalStorageAdapter.clearExamSession();
+            this.renderState(EXAM_STATES.IDLE);
+          }
+        }
+      } else if (savedResult) {
         this.examManager.examResult = savedResult;
         this.renderState(EXAM_STATES.REVIEW, savedResult);
       } else {
@@ -2304,37 +2519,24 @@
       }
     }
     /**
-     * Setup browser reload protection (F5 / Ctrl+R / beforeunload)
+     * Persist exam progress around reload, page close, or background transitions.
+     * Refresh remains available; the saved attempt is restored on the next page load.
      */
-    setupReloadProtection() {
+    setupRecoveryPersistence() {
       if (typeof window === "undefined") return;
-      window.addEventListener("keydown", (e) => {
+      const saveActiveAttempt = () => {
         if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-          const isR = e.key === "r" || e.key === "R" || e.keyCode === 82;
-          const isF5 = e.key === "F5" || e.keyCode === 116;
-          if (isF5 || isR && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            alert("\u26A0\uFE0F \u0E04\u0E38\u0E13\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E1E\u0E22\u0E32\u0E22\u0E32\u0E21\u0E17\u0E38\u0E08\u0E23\u0E34\u0E15\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A!\n\u0E23\u0E30\u0E1A\u0E1A\u0E17\u0E33\u0E01\u0E32\u0E23\u0E25\u0E47\u0E2D\u0E04\u0E01\u0E32\u0E23\u0E01\u0E14\u0E23\u0E35\u0E42\u0E2B\u0E25\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A");
-            return false;
+          this.examManager._saveSessionState(this.activeQuestionIdx);
+        }
+      };
+      window.addEventListener("pagehide", saveActiveAttempt);
+      window.addEventListener("beforeunload", saveActiveAttempt);
+      document.addEventListener("visibilitychange", () => {
+        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+          saveActiveAttempt();
+          if (document.visibilityState === "visible") {
+            this.examManager.syncTimeRemaining();
           }
-        }
-      }, true);
-      window.addEventListener("contextmenu", (e) => {
-        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-          e.preventDefault();
-          alert("\u26A0\uFE0F \u0E04\u0E38\u0E13\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E1E\u0E22\u0E32\u0E22\u0E32\u0E21\u0E17\u0E38\u0E08\u0E23\u0E34\u0E15\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A!\n\u0E23\u0E30\u0E1A\u0E1A\u0E17\u0E33\u0E01\u0E32\u0E23\u0E25\u0E47\u0E2D\u0E04\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1B\u0E49\u0E2D\u0E07\u0E01\u0E31\u0E19\u0E01\u0E32\u0E23\u0E23\u0E35\u0E42\u0E2B\u0E25\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A");
-          return false;
-        }
-      }, true);
-      window.addEventListener("beforeunload", (e) => {
-        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-          this.examManager.submitExam(true);
-          const warningMsg = "\u26A0\uFE0F \u0E04\u0E38\u0E13\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E1E\u0E22\u0E32\u0E22\u0E32\u0E21\u0E17\u0E38\u0E08\u0E23\u0E34\u0E15\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A! \u0E2B\u0E32\u0E01\u0E04\u0E38\u0E13\u0E23\u0E35\u0E42\u0E2B\u0E25\u0E14\u0E2B\u0E23\u0E37\u0E2D\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49 \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E08\u0E30\u0E16\u0E39\u0E01\u0E2A\u0E48\u0E07\u0E41\u0E25\u0E30\u0E22\u0E38\u0E15\u0E34\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A\u0E17\u0E31\u0E19\u0E17\u0E35!";
-          e.preventDefault();
-          e.returnValue = warningMsg;
-          return warningMsg;
         }
       });
     }
@@ -2405,8 +2607,12 @@
               <span>\u0E01\u0E32\u0E23\u0E15\u0E2D\u0E1A\u0E04\u0E33\u0E16\u0E32\u0E21\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E04\u0E33\u0E19\u0E27\u0E13\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 \u0E43\u0E2B\u0E49\u0E1B\u0E49\u0E2D\u0E19\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E28\u0E19\u0E34\u0E22\u0E21\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19 <strong>2 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07</strong></span>
             </li>
             <li class="flex items-start gap-2">
+              <span class="text-amber-400 font-bold">\u2022</span>
+              <span class="text-amber-200 font-semibold">\u0E2B\u0E32\u0E01\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E2B\u0E23\u0E37\u0E2D\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32 \u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A \u0E04\u0E33\u0E15\u0E2D\u0E1A \u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33 \u0E42\u0E14\u0E22\u0E19\u0E31\u0E1A\u0E40\u0E27\u0E25\u0E32\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E27\u0E25\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E27\u0E25\u0E32</span>
+            </li>
+            <li class="flex items-start gap-2">
               <span class="text-red-400 font-bold">\u2022</span>
-              <span class="text-red-300 font-semibold">\u0E2B\u0E49\u0E32\u0E21\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E2B\u0E23\u0E37\u0E2D\u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E17\u0E47\u0E1A \u0E21\u0E34\u0E09\u0E30\u0E19\u0E31\u0E49\u0E19\u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E17\u0E33\u0E01\u0E32\u0E23\u0E25\u0E47\u0E2D\u0E04\u0E41\u0E25\u0E30\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E16\u0E37\u0E2D\u0E27\u0E48\u0E32\u0E1E\u0E22\u0E32\u0E22\u0E32\u0E21\u0E17\u0E38\u0E08\u0E23\u0E34\u0E15\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A)</span>
+              <span class="text-red-300 font-semibold">\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A \u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E22\u0E31\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E2B\u0E23\u0E37\u0E2D\u0E41\u0E1A\u0E1A\u0E1D\u0E36\u0E01\u0E2B\u0E31\u0E14\u0E20\u0E32\u0E22\u0E43\u0E19\u0E41\u0E2D\u0E1B\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A</span>
             </li>
           </ul>
         </div>
@@ -2532,6 +2738,16 @@
       if (!q) return;
       this.container.innerHTML = `
       <div class="space-y-6">
+
+        ${this.examManager.isRecoveredSession ? `
+          <div role="status" aria-live="polite" class="rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100 flex items-start gap-3">
+            <span aria-hidden="true">\u21BB</span>
+            <div>
+              <div class="font-bold text-emerald-300">\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27</div>
+              <div class="text-xs text-emerald-100/80 mt-0.5">\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E16\u0E39\u0E01\u0E19\u0E33\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27 \u0E40\u0E27\u0E25\u0E32\u0E22\u0E31\u0E07\u0E04\u0E07\u0E19\u0E31\u0E1A\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E27\u0E25\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2A\u0E2D\u0E1A\u0E40\u0E14\u0E34\u0E21</div>
+            </div>
+          </div>
+        ` : ""}
         
         <!-- Active Exam Header Bar -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
@@ -2617,7 +2833,7 @@
      * Render Numeric Input for Calculation Questions
      */
     _renderNumericInput(q) {
-      const currentVal = this.examManager.userAnswers[this.activeQuestionIdx] || "";
+      const currentVal = this.examManager.userAnswers[this.activeQuestionIdx] ?? "";
       return `
       <div class="flex items-center gap-3 max-w-md">
         <label for="input-exam-numeric" class="text-sm font-semibold text-slate-300 whitespace-nowrap">
@@ -2639,20 +2855,21 @@
       qPills.forEach((btn) => {
         btn.addEventListener("click", () => {
           this.activeQuestionIdx = parseInt(btn.getAttribute("data-idx"), 10);
+          this.examManager._saveSessionState(this.activeQuestionIdx);
           this.renderActiveExamView();
         });
       });
       const choiceInputs = this.container.querySelectorAll('input[name="exam-choice"]');
       choiceInputs.forEach((radio) => {
         radio.addEventListener("change", (e) => {
-          this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value);
+          this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value, this.activeQuestionIdx);
           this.renderActiveExamView();
         });
       });
       const numericInput = this.container.querySelector("#input-exam-numeric");
       if (numericInput) {
         numericInput.addEventListener("input", (e) => {
-          this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value);
+          this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value, this.activeQuestionIdx);
         });
       }
       const btnPrev = this.container.querySelector("#btn-prev-q");
@@ -2660,6 +2877,7 @@
         btnPrev.addEventListener("click", () => {
           if (this.activeQuestionIdx > 0) {
             this.activeQuestionIdx--;
+            this.examManager._saveSessionState(this.activeQuestionIdx);
             this.renderActiveExamView();
           }
         });
@@ -2669,6 +2887,7 @@
         btnNext.addEventListener("click", () => {
           if (this.activeQuestionIdx < 4) {
             this.activeQuestionIdx++;
+            this.examManager._saveSessionState(this.activeQuestionIdx);
             this.renderActiveExamView();
           }
         });

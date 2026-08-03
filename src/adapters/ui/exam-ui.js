@@ -23,12 +23,15 @@ export class ExamUIAdapter {
     };
 
     this.examManager.onStateChangeCallback = (state, result) => {
+      if (state === EXAM_STATES.IN_PROGRESS && this.examManager.isRecoveredSession) {
+        this.activeQuestionIdx = this.examManager.restoredActiveQuestionIdx;
+      }
       this.renderState(state, result);
       TabNavigatorAdapter.setExamInProgress(state === EXAM_STATES.IN_PROGRESS);
     };
 
-    // Bind Reload & Unload Protection (F5, Ctrl+R, beforeunload)
-    this.setupReloadProtection();
+    // Persist the active attempt before reload, close, or background transitions.
+    this.setupRecoveryPersistence();
 
     // Check if active session or saved result exists in LocalStorage
     const savedSession = LocalStorageAdapter.loadExamSession();
@@ -36,13 +39,15 @@ export class ExamUIAdapter {
 
     if (savedSession) {
       const resumed = this.examManager.resumeExamSession(savedSession);
-      if (resumed) {
-        this.activeQuestionIdx = this.examManager.restoredActiveQuestionIdx || 0;
-      } else if (savedResult) {
-        this.examManager.examResult = savedResult;
-        this.renderState(EXAM_STATES.REVIEW, savedResult);
+      if (!resumed && (this.examManager.examResult || savedResult)) {
+        const recoveredResult = this.examManager.examResult || savedResult;
+        this.examManager.examResult = recoveredResult;
+        this.renderState(EXAM_STATES.REVIEW, recoveredResult);
       } else {
-        this.renderState(EXAM_STATES.IDLE);
+        if (!resumed) {
+          LocalStorageAdapter.clearExamSession();
+          this.renderState(EXAM_STATES.IDLE);
+        }
       }
     } else if (savedResult) {
       this.examManager.examResult = savedResult;
@@ -53,49 +58,27 @@ export class ExamUIAdapter {
   }
 
   /**
-   * Setup browser reload protection (F5 / Ctrl+R / beforeunload)
+   * Persist exam progress around reload, page close, or background transitions.
+   * Refresh remains available; the saved attempt is restored on the next page load.
    */
-  setupReloadProtection() {
+  setupRecoveryPersistence() {
     if (typeof window === 'undefined') return;
 
-    // Intercept keyboard reload shortcuts (F5, Ctrl+R, Cmd+R, Ctrl+Shift+R, Cmd+Shift+R, Alt+F4)
-    window.addEventListener('keydown', (e) => {
+    const saveActiveAttempt = () => {
       if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-        const isR = e.key === 'r' || e.key === 'R' || e.keyCode === 82;
-        const isF5 = e.key === 'F5' || e.keyCode === 116;
-
-        if (
-          isF5 ||
-          (isR && (e.ctrlKey || e.metaKey))
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          alert('⚠️ คุณกำลังจะพยายามทุจริตการสอบ!\nระบบทำการล็อคการกดรีโหลดหน้าจอระหว่างการทำข้อสอบ');
-          return false;
-        }
-      }
-    }, true);
-
-    // Block right-click context menu (reload prevention) during active exam
-    window.addEventListener('contextmenu', (e) => {
-      if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-        e.preventDefault();
-        alert('⚠️ คุณกำลังจะพยายามทุจริตการสอบ!\nระบบทำการล็อคคลิกขวาเพื่อป้องกันการรีโหลดหน้าจอระหว่างทำข้อสอบ');
-        return false;
-      }
-    }, true);
-
-    // Intercept browser reload / tab close / window unload
-    window.addEventListener('beforeunload', (e) => {
-      if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-        // Save current session state before unloading
         this.examManager._saveSessionState(this.activeQuestionIdx);
+      }
+    };
 
-        const warningMsg = '⚠️ คุณกำลังทำข้อสอบค้างอยู่! หากคุณรีโหลดหรือออกจากหน้านี้ ระบบจะฟื้นฟูข้อสอบเดิมและนับเวลาถอยหลังต่อตามจริง';
-        e.preventDefault();
-        e.returnValue = warningMsg;
-        return warningMsg;
+    window.addEventListener('pagehide', saveActiveAttempt);
+    window.addEventListener('beforeunload', saveActiveAttempt);
+
+    document.addEventListener('visibilitychange', () => {
+      if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+        saveActiveAttempt();
+        if (document.visibilityState === 'visible') {
+          this.examManager.syncTimeRemaining();
+        }
       }
     });
   }
@@ -170,8 +153,12 @@ export class ExamUIAdapter {
               <span>การตอบคำถามประเภทคำนวณตัวเลข ให้ป้อนคำตอบเป็นทศนิยมไม่เกิน <strong>2 ตำแหน่ง</strong></span>
             </li>
             <li class="flex items-start gap-2">
+              <span class="text-amber-400 font-bold">•</span>
+              <span class="text-amber-200 font-semibold">หากรีเฟรชหรือปิดหน้าแล้วกลับเข้ามา ระบบจะกู้คืนข้อสอบ คำตอบ และข้อที่กำลังทำ โดยนับเวลาต่อจากเวลาเริ่มเดิมและไม่เพิ่มเวลา</span>
+            </li>
+            <li class="flex items-start gap-2">
               <span class="text-red-400 font-bold">•</span>
-              <span class="text-red-300 font-semibold">ห้ามรีเฟรชหน้าจอหรือสลับแท็บ มิฉะนั้นระบบจะทำการล็อคและส่งคำตอบอัตโนมัติ (ถือว่าพยายามทุจริตการสอบ)</span>
+              <span class="text-red-300 font-semibold">ระหว่างทำข้อสอบ ระบบจะไม่อนุญาตให้สลับไปยังแท็บเนื้อหาหรือแบบฝึกหัดภายในแอปจนกว่าจะส่งข้อสอบ</span>
             </li>
           </ul>
         </div>
@@ -315,6 +302,16 @@ export class ExamUIAdapter {
 
     this.container.innerHTML = `
       <div class="space-y-6">
+
+        ${this.examManager.isRecoveredSession ? `
+          <div role="status" aria-live="polite" class="rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100 flex items-start gap-3">
+            <span aria-hidden="true">↻</span>
+            <div>
+              <div class="font-bold text-emerald-300">กู้คืนข้อสอบเดิมเรียบร้อยแล้ว</div>
+              <div class="text-xs text-emerald-100/80 mt-0.5">คำตอบและข้อที่กำลังทำถูกนำกลับมาแล้ว เวลายังคงนับต่อจากเวลาเริ่มสอบเดิม</div>
+            </div>
+          </div>
+        ` : ''}
         
         <!-- Active Exam Header Bar -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
@@ -405,7 +402,7 @@ export class ExamUIAdapter {
    * Render Numeric Input for Calculation Questions
    */
   _renderNumericInput(q) {
-    const currentVal = this.examManager.userAnswers[this.activeQuestionIdx] || '';
+    const currentVal = this.examManager.userAnswers[this.activeQuestionIdx] ?? '';
     return `
       <div class="flex items-center gap-3 max-w-md">
         <label for="input-exam-numeric" class="text-sm font-semibold text-slate-300 whitespace-nowrap">

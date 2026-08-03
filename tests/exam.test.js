@@ -5,6 +5,7 @@
 
 import { ExamManager, EXAM_STATES } from '../src/application/exam-manager.js';
 import { LocalStorageAdapter } from '../src/adapters/storage/local-storage.js';
+import { getSeededShuffle } from '../src/utils/random.js';
 
 let passed = 0;
 let failed = 0;
@@ -77,6 +78,30 @@ const em1Repeat = new ExamManager(1);
 const questionsAttempt1Repeat = em1Repeat.startExam(1001);
 assert(questionsAttempt1[1].correctAnswer === questionsAttempt1Repeat[1].correctAnswer,
   'Same attempt seed reproduces identical questions for attempt-scoped determinism');
+assert(JSON.stringify(questionsAttempt1[0].choices) === JSON.stringify(questionsAttempt1Repeat[0].choices),
+  'Same attempt seed reproduces identical Choice positions');
+assert(questionsAttempt1[0].correctChoiceIndex === questionsAttempt1Repeat[0].correctChoiceIndex,
+  'Same attempt seed reproduces the identical correct Choice index');
+
+const originalChoices = ['A', 'B', 'C', 'D'];
+const seededChoiceOrder = getSeededShuffle(7, 101, originalChoices, 7001);
+const repeatedChoiceOrder = getSeededShuffle(7, 101, originalChoices, 7001);
+const observedChoiceOrders = new Set(
+  Array.from({ length: 8 }, (_, idx) => getSeededShuffle(7, 101, originalChoices, 7001 + idx).join('|'))
+);
+
+assert(JSON.stringify(originalChoices) === JSON.stringify(['A', 'B', 'C', 'D']),
+  'Choice shuffling does not mutate the source array');
+assert(JSON.stringify([...seededChoiceOrder].sort()) === JSON.stringify([...originalChoices].sort()),
+  'Choice shuffling preserves every original option');
+assert(JSON.stringify(seededChoiceOrder) === JSON.stringify(repeatedChoiceOrder),
+  'Choice shuffling is deterministic within the same attempt');
+assert(observedChoiceOrders.size > 1,
+  'Different attempt seeds produce varied Choice positions');
+
+em1._stopTimer();
+em2._stopTimer();
+em1Repeat._stopTimer();
 
 const cleared = LocalStorageAdapter.clearExamResult();
 assert(cleared === true, 'LocalStorage clear operation succeeded');
@@ -93,12 +118,19 @@ const sessionQs = sessionEm.startExam(5555);
 // Record answer for Q0 and Q1
 sessionEm.recordAnswer(0, sessionQs[0].correctChoiceIndex);
 sessionEm.recordAnswer(1, sessionQs[1].correctAnswer);
+sessionEm._saveSessionState(3);
 
 // Verify session was saved to LocalStorage
 const savedSession = LocalStorageAdapter.loadExamSession();
 assert(savedSession !== null, 'Active exam session saved to LocalStorage');
 assert(savedSession.fullName === 'อนันต์ มุ่งมั่น', 'Saved session contains learner name');
 assert(savedSession.userAnswers[0] === sessionQs[0].correctChoiceIndex, 'Saved session contains user answer for Q0');
+assert(savedSession.activeQuestionIdx === 3, 'Saved session contains the active question index');
+
+// Simulate two minutes elapsed before the page is refreshed.
+savedSession.startTime = Date.now() - (2 * 60 * 1000);
+savedSession.endTime = savedSession.startTime + (15 * 60 * 1000);
+sessionEm._stopTimer();
 
 // Simulate page refresh: Create new ExamManager and resume from savedSession
 const freshEm = new ExamManager(1);
@@ -108,7 +140,8 @@ assert(resumedSuccess === true, 'Exam session resumed successfully');
 assert(freshEm.state === EXAM_STATES.IN_PROGRESS, 'Resumed state is IN_PROGRESS');
 assert(freshEm.questions[0].title === sessionQs[0].title, 'Resumed questions match original session');
 assert(freshEm.userAnswers[0] === sessionQs[0].correctChoiceIndex, 'Resumed user answers match recorded choice');
-assert(freshEm.timeRemaining <= 900 && freshEm.timeRemaining > 800, 'Remaining time reflects active exam duration');
+assert(freshEm.restoredActiveQuestionIdx === 3, 'Resumed session restores the same active question');
+assert(freshEm.timeRemaining <= 780 && freshEm.timeRemaining >= 779, 'Refresh keeps the original deadline after two elapsed minutes');
 
 // Submit exam and verify session is cleared
 freshEm.submitExam(false);
