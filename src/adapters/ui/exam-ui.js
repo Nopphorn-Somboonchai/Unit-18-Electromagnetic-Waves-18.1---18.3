@@ -514,32 +514,16 @@ export class ExamUIAdapter {
   }
 
   /**
-   * Render KaTeX Math Expressions
+   * Render KaTeX Math Expressions safely via KaTeXAdapter
    */
   renderMathExpressions() {
-    if (typeof window.katex === 'undefined') return;
-
-    const container = document.getElementById('sec-exam-live') || document.getElementById('sec-exam-result');
-    if (!container) return;
-
-    const targets = document.querySelectorAll('.exam-problem-content, .exam-choice-label span, #exam-solutions-container p, #exam-solutions-container li');
-    targets.forEach((node) => {
-      let html = node.innerHTML;
-      html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
-        try {
-          return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-        } catch (e) {
-          return match;
-        }
-      });
-      html = html.replace(/\$(.*?)\$/g, (match, math) => {
-        try {
-          return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-        } catch (e) {
-          return match;
-        }
-      });
-      node.innerHTML = html;
-    });
+    const liveContainer = document.getElementById('sec-exam-live');
+    if (liveContainer && !liveContainer.classList.contains('hidden')) {
+      KaTeXAdapter.renderAllMath(liveContainer);
+    }
+    const resultContainer = document.getElementById('sec-exam-result');
+    if (resultContainer && !resultContainer.classList.contains('hidden')) {
+      KaTeXAdapter.renderAllMath(resultContainer);
+    }
   }
 }

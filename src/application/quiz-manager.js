@@ -11,7 +11,7 @@ import { validateRollNumber, validateNumericAnswer } from '../utils/validation.j
 import { calculateWavelength, calculateAntennaLength } from '../physics/em-wave-engine.js';
 import { calculatePhotonEnergy, getSpectrumInfo } from '../physics/spectrum-solver.js';
 import { calculateMalusIntensity, calculateIntensityAfterPolarizer } from '../physics/polarization-solver.js';
-import { formatScientific } from '../utils/format.js';
+import { formatScientific, formatLatexScientific } from '../utils/format.js';
 import { SPEED_OF_LIGHT, PLANCK_CONSTANT } from '../shared/constants.js';
 
 export class QuizManager {
@@ -95,9 +95,9 @@ export class QuizManager {
         tolerance: 0.03,
         solutionSteps: [
           `**สูตรที่ใช้**: \\(c = f\\lambda \\rightarrow \\lambda = \\frac{c}{f}\\)`,
-          `แทนค่าความถี่ \\(f = ${freqMHz.toFixed(1)} \\text{ MHz} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
+          `แทนค่าความถี่ \\(f = ${freqMHz.toFixed(1)} \\text{ MHz} = ${formatLatexScientific(freqHz)} \\text{ Hz}\\)`,
           `แทนค่าอัตราเร็วแสง \\(c = 3.00 \\times 10^8 \\text{ m/s}\\)`,
-          `\\(\\lambda = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${correctWavelength.toFixed(3)} \\text{ m}\\)`,
+          `\\(\\lambda = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${correctWavelength.toFixed(3)} \\text{ m}\\)`,
           `**ตอบ**: ความยาวคลื่นเท่ากับ **${correctWavelength.toFixed(2)} m**`
         ]
       };
@@ -115,12 +115,12 @@ export class QuizManager {
         id: `q_18_1_${qIndex}_${B}`,
         topic: '18.1 สายอากาศและคลื่นแม่เหล็กไฟฟ้า',
         title: `ความยาวสายอากาศรับสัญญาณ (เลขที่ #${R})`,
-        problemText: `ต้องการออกแบบสายอากาศรับสัญญาณวิทยุแบบไดโพลครึ่งคลื่น (Half-wave Dipole Antenna) สำหรับรับความถี่ \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) จงคำนวณความยาวของสายอากาศ (\\(L = \\lambda/2\\)) ที่เหมาะสมในหน่วยเมตร (m)`,
+        problemText: `ต้องการออกแบบสายอากาศรับสัญญาณวิทยุแบบไดโพลครึ่งคลื่น (Half-wave Dipole Antenna) สำหรับรับความถี่ \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) จงคำนวณความยาวของสายอากาศ (\\(L = \\frac{\\lambda}{2}\\)) ที่เหมาะสมในหน่วยเมตร (m)`,
         unit: 'm',
         correctAnswer: Math.round(antennaLength * 100) / 100,
         tolerance: 0.03,
         solutionSteps: [
-          `**สูตรหาความยาวคลื่น**: \\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(3)} \\text{ m}\\)`,
+          `**สูตรหาความยาวคลื่น**: \\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${lambda.toFixed(3)} \\text{ m}\\)`,
           `**สูตรความยาวสายอากาศครึ่งคลื่น**: \\(L = \\frac{\\lambda}{2}\\)`,
           `\\(L = \\frac{${lambda.toFixed(3)}}{2} = ${antennaLength.toFixed(3)} \\text{ m}\\)`,
           `**ตอบ**: ความยาวสายอากาศเท่ากับ **${antennaLength.toFixed(2)} m**`
@@ -152,8 +152,8 @@ export class QuizManager {
       tolerance: 0.03,
       solutionSteps: [
         `**สูตรพลังงานโฟตอน**: \\(E = hf\\)`,
-        `แทนค่าพลังงานในหน่วยจูล: \\(E = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatScientific(energyObj.joules)} \\text{ J}\\)`,
-        `แปลงหน่วยเป็น eV: \\(E_{\\text{eV}} = \\frac{${formatScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(3)} \\text{ eV}\\)`,
+        `แทนค่าพลังงานในหน่วยจูล: \\(E = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatLatexScientific(energyObj.joules)} \\text{ J}\\)`,
+        `แปลงหน่วยเป็น eV: \\(E_{\\text{eV}} = \\frac{${formatLatexScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(3)} \\text{ eV}\\)`,
         `**ตอบ**: พลังงานโฟตอนเท่ากับ **${energyObj.electronVolts.toFixed(2)} eV**`
       ]
     };
@@ -181,9 +181,9 @@ export class QuizManager {
       correctAnswer: Math.round(I2 * 100) / 100,
       tolerance: 0.03,
       solutionSteps: [
-        `**ขั้นตอนที่ 1 (แผ่น P1)**: แสงไม่โพลาไรส์เมื่อผ่านแผ่นแรก จะมีความเข้มลดลงเหลือครึ่งหนึ่ง \\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
+        `**ขั้นตอนที่ 1 (แผ่น P1)**: แสงไม่โพลาไรส์เมื่อผ่านแผ่นแรก จะมีความเข้มลดลงเหลือครึ่งหนึ่ง \\(I_1 = \\frac{1}{2}I_0 = 50\\%\\)`,
         `**ขั้นตอนที่ 2 (แผ่น P2 ตามกฎของมาลุส)**: \\(I_2 = I_1 \\cos^2\\theta\\)`,
-        `แทนค่ามุมมาตรฐาน \\(\\theta = ${angleDeg}^\\circ\\) \\(\\rightarrow \\cos(${angleDeg}^\\circ) = ${Math.cos((angleDeg * Math.PI)/180).toFixed(4)}\\)`,
+        `แทนค่ามุมมาตรฐาน \\(\\theta = ${angleDeg}^\\circ \\rightarrow \\cos(${angleDeg}^\\circ) = ${Math.cos((angleDeg * Math.PI)/180).toFixed(4)}\\)`,
         `\\(I_2 = 50 \\times \\cos^2(${angleDeg}^\\circ) = 50 \\times ${Math.pow(Math.cos((angleDeg * Math.PI)/180), 2).toFixed(4)} = ${I2.toFixed(2)}\\%\\)`,
         `**ตอบ**: ความเข้มแสงที่ส่องผ่านแผ่น P2 คิดเป็น **${I2.toFixed(2)}%** ของความเข้มเริ่มต้น`
       ]

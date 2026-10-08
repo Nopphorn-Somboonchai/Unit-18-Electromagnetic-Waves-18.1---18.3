@@ -4,6 +4,8 @@
  * Designed according to U-17 Reference Architecture.
  */
 
+import { KaTeXAdapter } from '../formula/katex-adapter.js';
+
 export class TabNavigatorAdapter {
   static isExamInProgress = false;
   static currentSection = 'home';
@@ -80,6 +82,14 @@ export class TabNavigatorAdapter {
         this.simulators.emWaveSim.pause();
       }
     }
+
+    // Trigger KaTeX rendering on newly visible section
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`sec-${sectionId}`);
+        if (el) KaTeXAdapter.renderAllMath(el);
+      });
+    }
   }
 
   /**
@@ -114,6 +124,14 @@ export class TabNavigatorAdapter {
     });
 
     this.handleSimulatorLifecycle(tabId);
+
+    // Trigger KaTeX rendering on newly visible review tab
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        const content = document.getElementById(`review-tab-${tabId}`);
+        if (content) KaTeXAdapter.renderAllMath(content);
+      });
+    }
   }
 
   /**

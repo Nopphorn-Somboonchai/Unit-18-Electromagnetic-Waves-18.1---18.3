@@ -226,32 +226,12 @@ export class QuizUIAdapter {
   }
 
   /**
-   * Render KaTeX mathematical expressions
+   * Render KaTeX mathematical expressions safely via KaTeXAdapter
    */
   renderMathExpressions() {
-    if (typeof window.katex === 'undefined') return;
-
     const container = document.getElementById('sec-practice');
-    if (!container) return;
-
-    const targets = container.querySelectorAll('#prac-question-text, .choice-text, #prac-explanation-text li, #prac-explanation-text');
-    targets.forEach((node) => {
-      let html = node.innerHTML;
-      html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
-        try {
-          return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-        } catch (e) {
-          return match;
-        }
-      });
-      html = html.replace(/\$(.*?)\$/g, (match, math) => {
-        try {
-          return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-        } catch (e) {
-          return match;
-        }
-      });
-      node.innerHTML = html;
-    });
+    if (container) {
+      KaTeXAdapter.renderAllMath(container);
+    }
   }
 }

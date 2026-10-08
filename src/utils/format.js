@@ -24,6 +24,27 @@ export function formatScientific(num, decimals = 2) {
 }
 
 /**
+ * Format a number into standard LaTeX scientific notation (e.g. 3.00 \times 10^{8})
+ * Suitable for KaTeX math environments.
+ * @param {number} num - Number to format
+ * @param {number} [decimals=2] - Number of decimal places
+ * @returns {string} LaTeX formatted string without unicode superscripts
+ */
+export function formatLatexScientific(num, decimals = 2) {
+  const val = Number(num);
+  if (isNaN(val) || val === 0) return '0';
+
+  const absVal = Math.abs(val);
+  if (absVal >= 0.01 && absVal < 10000) {
+    return val.toFixed(decimals);
+  }
+
+  const exp = Math.floor(Math.log10(absVal));
+  const mantissa = val / Math.pow(10, exp);
+  return `${mantissa.toFixed(decimals)} \\times 10^{${exp}}`;
+}
+
+/**
  * Convert exponent integer to Unicode superscript (e.g. 8 -> ⁸, -19 -> ⁻¹⁹)
  * @param {number} exp
  * @returns {string} Superscript string

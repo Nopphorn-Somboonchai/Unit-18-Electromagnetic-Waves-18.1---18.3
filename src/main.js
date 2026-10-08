@@ -79,14 +79,24 @@ document.addEventListener('DOMContentLoaded', () => {
  * Render dynamic KaTeX mathematical notation into UI elements
  */
 function renderAllMathFormulas() {
+  let attempts = 0;
+  const maxAttempts = 20;
+
   const tryRender = () => {
+    attempts++;
     if (typeof window.katex !== 'undefined') {
       KaTeXAdapter.renderAllMath(document.body);
-    } else {
-      setTimeout(tryRender, 150);
+    } else if (attempts < maxAttempts) {
+      setTimeout(tryRender, 80);
     }
   };
-  setTimeout(tryRender, 100);
+
+  tryRender();
+  if (document.readyState !== 'complete') {
+    window.addEventListener('load', () => {
+      KaTeXAdapter.renderAllMath(document.body);
+    });
+  }
 }
 
 /**

@@ -10,7 +10,7 @@ import { getSeededInt, getSeededChoice, getSeededShuffle, getDynamicParam } from
 import { calculateWavelength, calculateFrequency } from '../physics/em-wave-engine.js';
 import { calculatePhotonEnergy, getSpectrumInfo } from '../physics/spectrum-solver.js';
 import { calculateMalusIntensity } from '../physics/polarization-solver.js';
-import { formatScientific } from '../utils/format.js';
+import { formatScientific, formatLatexScientific } from '../utils/format.js';
 import { LocalStorageAdapter } from '../adapters/storage/local-storage.js';
 
 export const EXAM_STATES = Object.freeze({
@@ -356,13 +356,13 @@ export class ExamManager {
       {
         problemText: 'ข้อใดต่อไปนี้กล่าวถึงสมบัติของคลื่นแม่เหล็กไฟฟ้า **ไม่ถูกต้อง**',
         choices: [
-          'เป็นคลื่นตามขวางที่สนามไฟฟ้าและสนามแม่เหล็กตั้งฉากกันและตั้งฉากกับทิศการแผ่',
-          'สามารถเคลื่อนที่ผ่านสุญญากาศได้ด้วยอัตราเร็วเท่ากับอัตราเร็วแสง c',
+          'เป็นคลื่นตามขวางที่สนามไฟฟ้าและสนามแม่เหล็กตั้งฉากกันและตั้งฉากกับทิศการแผ่ (\\(\\vec{E} \\perp \\vec{B} \\perp \\vec{v}\\))',
+          'สามารถเคลื่อนที่ผ่านสุญญากาศได้ด้วยอัตราเร็วเท่ากับอัตราเร็วแสง \\(c\\)',
           'จำเป็นต้องอาศัยตัวกลางที่มีมวลในการส่งผ่านพลังงาน',
-          'เวกเตอร์สนามไฟฟ้า E และสนามแม่เหล็ก B มีเฟสตรงกันทุกตำแหน่ง'
+          'เวกเตอร์สนามไฟฟ้า \\(\\vec{E}\\) และสนามแม่เหล็ก \\(\\vec{B}\\) มีเฟสตรงกันทุกตำแหน่ง'
         ],
         correctChoiceIndex: 2,
-        explanation: 'คลื่นแม่เหล็กไฟฟ้าเป็นคลื่นไม่อาศัยตัวกลาง สามารถเคลื่อนที่ผ่านสุญญากาศได้ การกล่าวว่า "จำเป็นต้องอาศัยตัวกลาง" จึงไม่ถูกต้อง'
+        explanation: 'คลื่นแม่เหล็กไฟฟ้าเป็นคลื่นไม่อาศัยตัวกลาง สามารถเคลื่อนที่ผ่านสุญญากาศได้ด้วยอัตราเร็ว \\(c\\) การกล่าวว่า "จำเป็นต้องอาศัยตัวกลาง" จึงไม่ถูกต้อง'
       },
       {
         problemText: 'ข้อใดเรียงลำดับคลื่นแม่เหล็กไฟฟ้าจาก **ความยาวคลื่นมากไปน้อย** ได้ถูกต้อง',
@@ -424,7 +424,7 @@ export class ExamManager {
           unit: 'm',
           correctAnswer: Math.round(lambda * 100) / 100,
           solutionSteps: [
-            `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`
+            `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`
           ]
         };
       },
@@ -441,8 +441,8 @@ export class ExamManager {
           unit: 'MHz',
           correctAnswer: Math.round(freqMHz * 100) / 100,
           solutionSteps: [
-            `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${lambdaM.toFixed(2)}} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
-            `แปลงหน่วยเป็น MHz: \\(f_{\\text{MHz}} = \\frac{${formatScientific(freqHz)}}{10^6} = ${freqMHz.toFixed(2)} \\text{ MHz}\\)`
+            `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${lambdaM.toFixed(2)}} = ${formatLatexScientific(freqHz)} \\text{ Hz}\\)`,
+            `แปลงหน่วยเป็น MHz: \\(f_{\\text{MHz}} = \\frac{${formatLatexScientific(freqHz)}}{10^6} = ${freqMHz.toFixed(2)} \\text{ MHz}\\)`
           ]
         };
       },
@@ -456,11 +456,11 @@ export class ExamManager {
           type: 'numeric',
           topic: '18.1 สายอากาศครึ่งคลื่น',
           title: 'ข้อ 2: คำนวณความยาวสายอากาศไดโพล',
-          problemText: `สายอากาศแบบไดโพลครึ่งคลื่น (Half-wave Dipole) มีความยาวเท่ากับ \\(L = \\lambda/2\\) สำหรับรับคลื่นความถี่ \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) ในสุญญากาศ จงหาความยาวของสายอากาศนี้ในหน่วยเมตร (m)`,
+          problemText: `สายอากาศแบบไดโพลครึ่งคลื่น (Half-wave Dipole) มีความยาวเท่ากับ \\(L = \\frac{\\lambda}{2}\\) สำหรับรับคลื่นความถี่ \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) ในสุญญากาศ จงหาความยาวของสายอากาศนี้ในหน่วยเมตร (m)`,
           unit: 'm',
           correctAnswer: Math.round(antennaL * 100) / 100,
           solutionSteps: [
-            `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`,
+            `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`,
             `\\(L = \\frac{\\lambda}{2} = \\frac{${lambda.toFixed(2)}}{2} = ${antennaL.toFixed(2)} \\text{ m}\\)`
           ]
         };
@@ -485,8 +485,8 @@ export class ExamManager {
           unit: 'eV',
           correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
           solutionSteps: [
-            `\\(E = hf = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatScientific(energyObj.joules)} \\text{ J}\\)`,
-            `\\(E_{\\text{eV}} = \\frac{${formatScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
+            `\\(E = hf = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatLatexScientific(energyObj.joules)} \\text{ J}\\)`,
+            `\\(E_{\\text{eV}} = \\frac{${formatLatexScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
           ]
         };
       },
@@ -504,8 +504,8 @@ export class ExamManager {
           unit: 'x10^14 Hz',
           correctAnswer: Math.round(freqFactor * 100) / 100,
           solutionSteps: [
-            `\\(E_{\\text{J}} = ${energyEV.toFixed(2)} \\times 1.602 \\times 10^{-19} = ${formatScientific(energyJ)} \\text{ J}\\)`,
-            `\\(f = \\frac{E}{h} = \\frac{${formatScientific(energyJ)}}{6.626 \\times 10^{-34}} = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\)`
+            `\\(E_{\\text{J}} = ${energyEV.toFixed(2)} \\times 1.602 \\times 10^{-19} = ${formatLatexScientific(energyJ)} \\text{ J}\\)`,
+            `\\(f = \\frac{E}{h} = \\frac{${formatLatexScientific(energyJ)}}{6.626 \\times 10^{-34}} = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\)`
           ]
         };
       },
@@ -523,7 +523,7 @@ export class ExamManager {
           unit: 'eV',
           correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
           solutionSteps: [
-            `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${Math.round(lambdaNm)} \\times 10^{-9}} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
+            `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${Math.round(lambdaNm)} \\times 10^{-9}} = ${formatLatexScientific(freqHz)} \\text{ Hz}\\)`,
             `\\(E_{\\text{eV}} = \\frac{hf}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
           ]
         };
@@ -549,7 +549,7 @@ export class ExamManager {
           unit: '%',
           correctAnswer: Math.round(I2 * 100) / 100,
           solutionSteps: [
-            `\\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
+            `\\(I_1 = \\frac{1}{2}I_0 = \\frac{100}{2} = 50\\%\\)`,
             `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 50 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
           ]
         };
@@ -587,7 +587,7 @@ export class ExamManager {
           unit: '%',
           correctAnswer: Math.round(I2 * 100) / 100,
           solutionSteps: [
-            `\\(I_1 = \\frac{I_0}{2} = \\frac{80}{2} = 40\\%\\)`,
+            `\\(I_1 = \\frac{1}{2}I_0 = \\frac{80}{2} = 40\\%\\)`,
             `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 40 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
           ]
         };
@@ -607,11 +607,11 @@ export class ExamManager {
       type: 'numeric',
       topic: '18.1 สายอากาศควอเตอร์เวฟ',
       title: 'ข้อ 5: สายอากาศรับสัญญาณ 1/4 ความยาวคลื่น',
-      problemText: `สายอากาศแบบโมโนโพล (Quarter-wave Monopole) มีความยาวเท่ากับ \\(1/4\\) ของความยาวคลื่น (\\(L = \\lambda/4\\)) สำหรับรับคลื่นความถี่ \\(f = ${freq5MHz.toFixed(1)} \\text{ MHz}\\) ในสุญญากาศ (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) จงหาความยาวของสายอากาศนี้ในหน่วยเมตร (m)`,
+      problemText: `สายอากาศแบบโมโนโพล (Quarter-wave Monopole) มีความยาวเท่ากับ \\(\\frac{1}{4}\\) ของความยาวคลื่น (\\(L = \\frac{\\lambda}{4}\\)) สำหรับรับคลื่นความถี่ \\(f = ${freq5MHz.toFixed(1)} \\text{ MHz}\\) ในสุญญากาศ (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) จงหาความยาวของสายอากาศนี้ในหน่วยเมตร (m)`,
       unit: 'm',
       correctAnswer: Math.round(antennaLen * 100) / 100,
       solutionSteps: [
-        `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freq5Hz)}} = ${lambda5.toFixed(2)} \\text{ m}\\)`,
+        `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freq5Hz)}} = ${lambda5.toFixed(2)} \\text{ m}\\)`,
         `\\(L = \\frac{\\lambda}{4} = \\frac{${lambda5.toFixed(2)}}{4} = ${antennaLen.toFixed(2)} \\text{ m}\\)`
       ]
     };

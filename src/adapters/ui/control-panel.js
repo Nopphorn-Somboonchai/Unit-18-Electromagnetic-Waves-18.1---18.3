@@ -85,7 +85,7 @@ export class ControlPanelAdapter {
 
       simulator.onIntensityChangeCallback = ({ analyzerAngle, intensity2, isCrossed }) => {
         const frac = (intensity2 / 100).toFixed(2);
-        valIntensity.textContent = `${intensity2.toFixed(1)}% (${frac} I₀)`;
+        valIntensity.innerHTML = `${intensity2.toFixed(1)}% (${KaTeXAdapter.renderToString(`${frac} I_0`)})`;
 
         if (isCrossed) {
           valIntensity.className = 'text-sm font-bold font-mono text-red-400 bg-red-950/40 px-3 py-1.5 rounded-md border border-red-800';

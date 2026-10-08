@@ -1070,6 +1070,7 @@
      * @returns {boolean} Success status
      */
     static render(latex, elementOrId, displayMode = false) {
+      if (typeof document === "undefined") return false;
       const el = typeof elementOrId === "string" ? document.getElementById(elementOrId) : elementOrId;
       if (!el) {
         console.warn(`[KaTeXAdapter] Target element "${elementOrId}" not found in DOM`);
@@ -1084,6 +1085,7 @@
         window.katex.render(latex, el, {
           displayMode,
           throwOnError: false,
+          strict: false,
           output: "htmlAndMathml"
         });
         return true;
@@ -1094,53 +1096,150 @@
       }
     }
     /**
-     * Scan and render all inline KaTeX math expressions \\(...\\) and $...$ in container
-     * @param {HTMLElement} [container=document.body]
+     * Render LaTeX string to HTML string.
+     * @param {string} latex
+     * @param {boolean} [displayMode=false]
+     * @returns {string}
+     */
+    static renderToString(latex, displayMode = false) {
+      if (typeof window === "undefined" || typeof window.katex === "undefined") {
+        return latex;
+      }
+      try {
+        return window.katex.renderToString(latex, {
+          displayMode,
+          throwOnError: false,
+          strict: false,
+          output: "htmlAndMathml"
+        });
+      } catch (e) {
+        return latex;
+      }
+    }
+    /**
+     * Safely scan and render all mathematical formulas in a container element.
+     * Prioritizes official renderMathInElement (auto-render extension) for safe DOM text node handling.
+     * @param {HTMLElement|string} [container=document.body]
      */
     static renderAllMath(container = document.body) {
-      if (typeof window.katex === "undefined" || !container) return;
-      const targets = container.querySelectorAll(".glass-panel div, .glass-panel p, .glass-panel label, .glass-panel li, .glass-panel h3, .glass-panel h4");
-      targets.forEach((el) => {
-        if (el.querySelector(".katex")) return;
-        let html = el.innerHTML;
-        let modified = false;
-        if (html.includes("\\(")) {
-          html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
-            try {
-              modified = true;
-              return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-            } catch (e) {
-              return match;
-            }
+      if (typeof document === "undefined") return;
+      const targetEl = typeof container === "string" ? document.getElementById(container) : container;
+      if (!targetEl) return;
+      if (typeof window !== "undefined" && typeof window.renderMathInElement === "function") {
+        try {
+          window.renderMathInElement(targetEl, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "\\[", right: "\\]", display: true },
+              { left: "\\(", right: "\\)", display: false },
+              { left: "$", right: "$", display: false }
+            ],
+            ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "input", "select", "option"],
+            throwOnError: false,
+            strict: false,
+            errorColor: "#ef4444"
           });
+          return;
+        } catch (err) {
+          console.warn("[KaTeXAdapter] renderMathInElement failed, using fallback parser:", err);
         }
-        if (html.includes("$")) {
-          html = html.replace(/\$(.*?)\$/g, (match, math) => {
-            try {
-              modified = true;
-              return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-            } catch (e) {
-              return match;
+      }
+      if (typeof window !== "undefined" && typeof window.katex !== "undefined") {
+        this._fallbackRenderTextNodes(targetEl);
+      }
+    }
+    /**
+     * Internal text node parser fallback when renderMathInElement is not present.
+     * Avoids destructive innerHTML assignments on container nodes.
+     * @private
+     */
+    static _fallbackRenderTextNodes(container) {
+      const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode(node) {
+            if (!node.nodeValue || !node.nodeValue.includes("\\(") && !node.nodeValue.includes("$")) {
+              return NodeFilter.FILTER_REJECT;
             }
-          });
+            const parent = node.parentElement;
+            if (!parent) return NodeFilter.FILTER_REJECT;
+            const tag = parent.tagName.toLowerCase();
+            if (["script", "style", "textarea", "pre", "code", "input", "select", "option"].includes(tag)) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            if (parent.closest(".katex")) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          }
         }
-        if (modified) {
-          el.innerHTML = html;
+      );
+      const nodesToReplace = [];
+      let current;
+      while (current = walker.nextNode()) {
+        nodesToReplace.push(current);
+      }
+      nodesToReplace.forEach((textNode) => {
+        const text = textNode.nodeValue;
+        const mathRegex = /(\\\([\s\S]*?\\\))|(\$\$[\s\S]*?\$\$)|(\$[^\$]+?\$)/g;
+        if (!mathRegex.test(text)) return;
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        mathRegex.lastIndex = 0;
+        while ((match = mathRegex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+          }
+          const rawMath = match[0];
+          let formula = "";
+          let displayMode = false;
+          if (rawMath.startsWith("\\(") && rawMath.endsWith("\\)")) {
+            formula = rawMath.slice(2, -2);
+            displayMode = false;
+          } else if (rawMath.startsWith("$$") && rawMath.endsWith("$$")) {
+            formula = rawMath.slice(2, -2);
+            displayMode = true;
+          } else if (rawMath.startsWith("$") && rawMath.endsWith("$")) {
+            formula = rawMath.slice(1, -1);
+            displayMode = false;
+          }
+          try {
+            const span = document.createElement("span");
+            window.katex.render(formula, span, {
+              displayMode,
+              throwOnError: false,
+              strict: false
+            });
+            fragment.appendChild(span);
+          } catch (e) {
+            fragment.appendChild(document.createTextNode(rawMath));
+          }
+          lastIndex = match.index + rawMath.length;
+        }
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+        }
+        if (textNode.parentNode) {
+          textNode.parentNode.replaceChild(fragment, textNode);
         }
       });
     }
     /**
-     * Pre-defined physics LaTeX formula templates for Unit 18
+     * Pre-defined physics LaTeX formula templates for Unit 18 (Standardized Notation)
      */
     static TEMPLATES = Object.freeze({
-      SPEED_OF_LIGHT: "c = f \\lambda",
+      SPEED_OF_LIGHT: "c = f \\lambda = 3.00 \\times 10^8 \\text{ m/s}",
       WAVELENGTH_SOLVER: "\\lambda = \\frac{c}{f}",
       PHOTON_ENERGY: "E = hf = \\frac{hc}{\\lambda}",
       MALUS_LAW: "I = I_0 \\cos^2\\theta",
       POLAROID_TWO: "I_2 = I_1 \\cos^2(\\theta_2 - \\theta_1)",
-      UNPOLARIZED_P1: "I_1 = \\frac{I_0}{2}",
+      UNPOLARIZED_P1: "I_1 = \\frac{1}{2}I_0",
       VECTOR_FIELD: "\\vec{E} \\perp \\vec{B} \\perp \\vec{v}",
-      RIGHT_HAND_RULE: "\\vec{E} \\times \\vec{B} = \\vec{v}"
+      PROPAGATION_DIRECTION: "\\hat{v} = \\hat{E} \\times \\hat{B}",
+      PLANCK_CONSTANT: "h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s}",
+      EV_CONVERSION: "1 \\text{ eV} = 1.602 \\times 10^{-19} \\text{ J}"
     });
   };
 
@@ -1211,7 +1310,7 @@
         });
         simulator.onIntensityChangeCallback = ({ analyzerAngle, intensity2, isCrossed }) => {
           const frac = (intensity2 / 100).toFixed(2);
-          valIntensity.textContent = `${intensity2.toFixed(1)}% (${frac} I\u2080)`;
+          valIntensity.innerHTML = `${intensity2.toFixed(1)}% (${KaTeXAdapter.renderToString(`${frac} I_0`)})`;
           if (isCrossed) {
             valIntensity.className = "text-sm font-bold font-mono text-red-400 bg-red-950/40 px-3 py-1.5 rounded-md border border-red-800";
           } else {
@@ -1295,6 +1394,12 @@
           this.simulators.emWaveSim.pause();
         }
       }
+      if (typeof requestAnimationFrame !== "undefined") {
+        requestAnimationFrame(() => {
+          const el = document.getElementById(`sec-${sectionId}`);
+          if (el) KaTeXAdapter.renderAllMath(el);
+        });
+      }
     }
     /**
      * Switch review tab (18-1-wave, 18-2-spectrum, 18-3-polarization)
@@ -1323,6 +1428,12 @@
         }
       });
       this.handleSimulatorLifecycle(tabId);
+      if (typeof requestAnimationFrame !== "undefined") {
+        requestAnimationFrame(() => {
+          const content = document.getElementById(`review-tab-${tabId}`);
+          if (content) KaTeXAdapter.renderAllMath(content);
+        });
+      }
     }
     /**
      * Manage active simulator lifecycle on sub-tab switch
@@ -1482,7 +1593,7 @@
   }
 
   // src/utils/format.js
-  function formatScientific(num, decimals = 2) {
+  function formatLatexScientific(num, decimals = 2) {
     const val = Number(num);
     if (isNaN(val) || val === 0) return "0";
     const absVal = Math.abs(val);
@@ -1491,23 +1602,7 @@
     }
     const exp = Math.floor(Math.log10(absVal));
     const mantissa = val / Math.pow(10, exp);
-    return `${mantissa.toFixed(decimals)} \xD7 10${toSuperscriptExponent(exp)}`;
-  }
-  function toSuperscriptExponent(exp) {
-    const map = {
-      "-": "\u207B",
-      "0": "\u2070",
-      "1": "\xB9",
-      "2": "\xB2",
-      "3": "\xB3",
-      "4": "\u2074",
-      "5": "\u2075",
-      "6": "\u2076",
-      "7": "\u2077",
-      "8": "\u2078",
-      "9": "\u2079"
-    };
-    return String(exp).split("").map((char) => map[char] || char).join("");
+    return `${mantissa.toFixed(decimals)} \\times 10^{${exp}}`;
   }
 
   // src/application/quiz-manager.js
@@ -1580,9 +1675,9 @@
           tolerance: 0.03,
           solutionSteps: [
             `**\u0E2A\u0E39\u0E15\u0E23\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49**: \\(c = f\\lambda \\rightarrow \\lambda = \\frac{c}{f}\\)`,
-            `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
+            `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz} = ${formatLatexScientific(freqHz)} \\text{ Hz}\\)`,
             `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E2A\u0E07 \\(c = 3.00 \\times 10^8 \\text{ m/s}\\)`,
-            `\\(\\lambda = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${correctWavelength.toFixed(3)} \\text{ m}\\)`,
+            `\\(\\lambda = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${correctWavelength.toFixed(3)} \\text{ m}\\)`,
             `**\u0E15\u0E2D\u0E1A**: \u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A **${correctWavelength.toFixed(2)} m**`
           ]
         };
@@ -1595,12 +1690,12 @@
           id: `q_18_1_${qIndex}_${B}`,
           topic: "18.1 \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E25\u0E30\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32",
           title: `\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13 (\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${R})`,
-          problemText: `\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2D\u0E2D\u0E01\u0E41\u0E1A\u0E1A\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E27\u0E34\u0E17\u0E22\u0E38\u0E41\u0E1A\u0E1A\u0E44\u0E14\u0E42\u0E1E\u0E25\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19 (Half-wave Dipole Antenna) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28 (\\(L = \\lambda/2\\)) \u0E17\u0E35\u0E48\u0E40\u0E2B\u0E21\u0E32\u0E30\u0E2A\u0E21\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
+          problemText: `\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2D\u0E2D\u0E01\u0E41\u0E1A\u0E1A\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13\u0E27\u0E34\u0E17\u0E22\u0E38\u0E41\u0E1A\u0E1A\u0E44\u0E14\u0E42\u0E1E\u0E25\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19 (Half-wave Dipole Antenna) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E08\u0E07\u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28 (\\(L = \\frac{\\lambda}{2}\\)) \u0E17\u0E35\u0E48\u0E40\u0E2B\u0E21\u0E32\u0E30\u0E2A\u0E21\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
           unit: "m",
           correctAnswer: Math.round(antennaLength * 100) / 100,
           tolerance: 0.03,
           solutionSteps: [
-            `**\u0E2A\u0E39\u0E15\u0E23\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19**: \\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(3)} \\text{ m}\\)`,
+            `**\u0E2A\u0E39\u0E15\u0E23\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19**: \\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${lambda.toFixed(3)} \\text{ m}\\)`,
             `**\u0E2A\u0E39\u0E15\u0E23\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19**: \\(L = \\frac{\\lambda}{2}\\)`,
             `\\(L = \\frac{${lambda.toFixed(3)}}{2} = ${antennaLength.toFixed(3)} \\text{ m}\\)`,
             `**\u0E15\u0E2D\u0E1A**: \u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A **${antennaLength.toFixed(2)} m**`
@@ -1627,8 +1722,8 @@
         tolerance: 0.03,
         solutionSteps: [
           `**\u0E2A\u0E39\u0E15\u0E23\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19**: \\(E = hf\\)`,
-          `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E08\u0E39\u0E25: \\(E = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatScientific(energyObj.joules)} \\text{ J}\\)`,
-          `\u0E41\u0E1B\u0E25\u0E07\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E1B\u0E47\u0E19 eV: \\(E_{\\text{eV}} = \\frac{${formatScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(3)} \\text{ eV}\\)`,
+          `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E08\u0E39\u0E25: \\(E = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatLatexScientific(energyObj.joules)} \\text{ J}\\)`,
+          `\u0E41\u0E1B\u0E25\u0E07\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E1B\u0E47\u0E19 eV: \\(E_{\\text{eV}} = \\frac{${formatLatexScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(3)} \\text{ eV}\\)`,
           `**\u0E15\u0E2D\u0E1A**: \u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A **${energyObj.electronVolts.toFixed(2)} eV**`
         ]
       };
@@ -1652,9 +1747,9 @@
         correctAnswer: Math.round(I2 * 100) / 100,
         tolerance: 0.03,
         solutionSteps: [
-          `**\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1 (\u0E41\u0E1C\u0E48\u0E19 P1)**: \u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E23\u0E01 \u0E08\u0E30\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E25\u0E14\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07 \\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
+          `**\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1 (\u0E41\u0E1C\u0E48\u0E19 P1)**: \u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E23\u0E01 \u0E08\u0E30\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E25\u0E14\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07 \\(I_1 = \\frac{1}{2}I_0 = 50\\%\\)`,
           `**\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2 (\u0E41\u0E1C\u0E48\u0E19 P2 \u0E15\u0E32\u0E21\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A)**: \\(I_2 = I_1 \\cos^2\\theta\\)`,
-          `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E21\u0E38\u0E21\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19 \\(\\theta = ${angleDeg}^\\circ\\) \\(\\rightarrow \\cos(${angleDeg}^\\circ) = ${Math.cos(angleDeg * Math.PI / 180).toFixed(4)}\\)`,
+          `\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E21\u0E38\u0E21\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19 \\(\\theta = ${angleDeg}^\\circ \\rightarrow \\cos(${angleDeg}^\\circ) = ${Math.cos(angleDeg * Math.PI / 180).toFixed(4)}\\)`,
           `\\(I_2 = 50 \\times \\cos^2(${angleDeg}^\\circ) = 50 \\times ${Math.pow(Math.cos(angleDeg * Math.PI / 180), 2).toFixed(4)} = ${I2.toFixed(2)}\\%\\)`,
           `**\u0E15\u0E2D\u0E1A**: \u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E2D\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E48\u0E19 P2 \u0E04\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 **${I2.toFixed(2)}%** \u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19`
         ]
@@ -1871,31 +1966,13 @@
       this.renderMathExpressions();
     }
     /**
-     * Render KaTeX mathematical expressions
+     * Render KaTeX mathematical expressions safely via KaTeXAdapter
      */
     renderMathExpressions() {
-      if (typeof window.katex === "undefined") return;
       const container = document.getElementById("sec-practice");
-      if (!container) return;
-      const targets = container.querySelectorAll("#prac-question-text, .choice-text, #prac-explanation-text li, #prac-explanation-text");
-      targets.forEach((node) => {
-        let html = node.innerHTML;
-        html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
-          try {
-            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-          } catch (e) {
-            return match;
-          }
-        });
-        html = html.replace(/\$(.*?)\$/g, (match, math) => {
-          try {
-            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-          } catch (e) {
-            return match;
-          }
-        });
-        node.innerHTML = html;
-      });
+      if (container) {
+        KaTeXAdapter.renderAllMath(container);
+      }
     }
   };
 
@@ -2278,13 +2355,13 @@
         {
           problemText: "\u0E02\u0E49\u0E2D\u0E43\u0E14\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E19\u0E35\u0E49\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E02\u0E2D\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 **\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07**",
           choices: [
-            "\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E15\u0E32\u0E21\u0E02\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E19\u0E41\u0E25\u0E30\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E1A\u0E17\u0E34\u0E28\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48",
-            "\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E2A\u0E07 c",
+            "\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E15\u0E32\u0E21\u0E02\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E19\u0E41\u0E25\u0E30\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E01\u0E31\u0E1A\u0E17\u0E34\u0E28\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48 (\\(\\vec{E} \\perp \\vec{B} \\perp \\vec{v}\\))",
+            "\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27\u0E41\u0E2A\u0E07 \\(c\\)",
             "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E21\u0E27\u0E25\u0E43\u0E19\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19",
-            "\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32 E \u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01 B \u0E21\u0E35\u0E40\u0E1F\u0E2A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07"
+            "\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32 \\(\\vec{E}\\) \u0E41\u0E25\u0E30\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01 \\(\\vec{B}\\) \u0E21\u0E35\u0E40\u0E1F\u0E2A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07"
           ],
           correctChoiceIndex: 2,
-          explanation: '\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49 \u0E01\u0E32\u0E23\u0E01\u0E25\u0E48\u0E32\u0E27\u0E27\u0E48\u0E32 "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07" \u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07'
+          explanation: '\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E25\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E40\u0E23\u0E47\u0E27 \\(c\\) \u0E01\u0E32\u0E23\u0E01\u0E25\u0E48\u0E32\u0E27\u0E27\u0E48\u0E32 "\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E32\u0E28\u0E31\u0E22\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07" \u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07'
         },
         {
           problemText: "\u0E02\u0E49\u0E2D\u0E43\u0E14\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E08\u0E32\u0E01 **\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19\u0E21\u0E32\u0E01\u0E44\u0E1B\u0E19\u0E49\u0E2D\u0E22** \u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
@@ -2343,7 +2420,7 @@
             unit: "m",
             correctAnswer: Math.round(lambda * 100) / 100,
             solutionSteps: [
-              `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`
+              `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`
             ]
           };
         },
@@ -2360,8 +2437,8 @@
             unit: "MHz",
             correctAnswer: Math.round(freqMHz * 100) / 100,
             solutionSteps: [
-              `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${lambdaM.toFixed(2)}} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
-              `\u0E41\u0E1B\u0E25\u0E07\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E1B\u0E47\u0E19 MHz: \\(f_{\\text{MHz}} = \\frac{${formatScientific(freqHz)}}{10^6} = ${freqMHz.toFixed(2)} \\text{ MHz}\\)`
+              `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${lambdaM.toFixed(2)}} = ${formatLatexScientific(freqHz)} \\text{ Hz}\\)`,
+              `\u0E41\u0E1B\u0E25\u0E07\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E1B\u0E47\u0E19 MHz: \\(f_{\\text{MHz}} = \\frac{${formatLatexScientific(freqHz)}}{10^6} = ${freqMHz.toFixed(2)} \\text{ MHz}\\)`
             ]
           };
         },
@@ -2375,11 +2452,11 @@
             type: "numeric",
             topic: "18.1 \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19",
             title: "\u0E02\u0E49\u0E2D 2: \u0E04\u0E33\u0E19\u0E27\u0E13\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E44\u0E14\u0E42\u0E1E\u0E25",
-            problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E44\u0E14\u0E42\u0E1E\u0E25\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19 (Half-wave Dipole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(L = \\lambda/2\\) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
+            problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E44\u0E14\u0E42\u0E1E\u0E25\u0E04\u0E23\u0E36\u0E48\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19 (Half-wave Dipole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(L = \\frac{\\lambda}{2}\\) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freqMHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
             unit: "m",
             correctAnswer: Math.round(antennaL * 100) / 100,
             solutionSteps: [
-              `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`,
+              `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freqHz)}} = ${lambda.toFixed(2)} \\text{ m}\\)`,
               `\\(L = \\frac{\\lambda}{2} = \\frac{${lambda.toFixed(2)}}{2} = ${antennaL.toFixed(2)} \\text{ m}\\)`
             ]
           };
@@ -2401,8 +2478,8 @@
             unit: "eV",
             correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
             solutionSteps: [
-              `\\(E = hf = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatScientific(energyObj.joules)} \\text{ J}\\)`,
-              `\\(E_{\\text{eV}} = \\frac{${formatScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
+              `\\(E = hf = (6.626 \\times 10^{-34}) \\times (${freqFactor.toFixed(2)} \\times 10^{14}) = ${formatLatexScientific(energyObj.joules)} \\text{ J}\\)`,
+              `\\(E_{\\text{eV}} = \\frac{${formatLatexScientific(energyObj.joules)}}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
             ]
           };
         },
@@ -2420,8 +2497,8 @@
             unit: "x10^14 Hz",
             correctAnswer: Math.round(freqFactor * 100) / 100,
             solutionSteps: [
-              `\\(E_{\\text{J}} = ${energyEV.toFixed(2)} \\times 1.602 \\times 10^{-19} = ${formatScientific(energyJ)} \\text{ J}\\)`,
-              `\\(f = \\frac{E}{h} = \\frac{${formatScientific(energyJ)}}{6.626 \\times 10^{-34}} = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\)`
+              `\\(E_{\\text{J}} = ${energyEV.toFixed(2)} \\times 1.602 \\times 10^{-19} = ${formatLatexScientific(energyJ)} \\text{ J}\\)`,
+              `\\(f = \\frac{E}{h} = \\frac{${formatLatexScientific(energyJ)}}{6.626 \\times 10^{-34}} = ${freqFactor.toFixed(2)} \\times 10^{14} \\text{ Hz}\\)`
             ]
           };
         },
@@ -2439,7 +2516,7 @@
             unit: "eV",
             correctAnswer: Math.round(energyObj.electronVolts * 100) / 100,
             solutionSteps: [
-              `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${Math.round(lambdaNm)} \\times 10^{-9}} = ${formatScientific(freqHz)} \\text{ Hz}\\)`,
+              `\\(f = \\frac{c}{\\lambda} = \\frac{3.00 \\times 10^8}{${Math.round(lambdaNm)} \\times 10^{-9}} = ${formatLatexScientific(freqHz)} \\text{ Hz}\\)`,
               `\\(E_{\\text{eV}} = \\frac{hf}{1.602 \\times 10^{-19}} = ${energyObj.electronVolts.toFixed(2)} \\text{ eV}\\)`
             ]
           };
@@ -2462,7 +2539,7 @@
             unit: "%",
             correctAnswer: Math.round(I2 * 100) / 100,
             solutionSteps: [
-              `\\(I_1 = \\frac{I_0}{2} = 50\\%\\)`,
+              `\\(I_1 = \\frac{1}{2}I_0 = \\frac{100}{2} = 50\\%\\)`,
               `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 50 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
             ]
           };
@@ -2500,7 +2577,7 @@
             unit: "%",
             correctAnswer: Math.round(I2 * 100) / 100,
             solutionSteps: [
-              `\\(I_1 = \\frac{I_0}{2} = \\frac{80}{2} = 40\\%\\)`,
+              `\\(I_1 = \\frac{1}{2}I_0 = \\frac{80}{2} = 40\\%\\)`,
               `\\(I_2 = I_1 \\cos^2(${angleDeg}^\\circ) = 40 \\times \\cos^2(${angleDeg}^\\circ) = ${I2.toFixed(2)}\\%\\)`
             ]
           };
@@ -2517,11 +2594,11 @@
         type: "numeric",
         topic: "18.1 \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E04\u0E27\u0E2D\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E40\u0E27\u0E1F",
         title: "\u0E02\u0E49\u0E2D 5: \u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E13 1/4 \u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19",
-        problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E42\u0E21\u0E42\u0E19\u0E42\u0E1E\u0E25 (Quarter-wave Monopole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(1/4\\) \u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(L = \\lambda/4\\)) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freq5MHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
+        problemText: `\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E41\u0E1A\u0E1A\u0E42\u0E21\u0E42\u0E19\u0E42\u0E1E\u0E25 (Quarter-wave Monopole) \u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A \\(\\frac{1}{4}\\) \u0E02\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E04\u0E25\u0E37\u0E48\u0E19 (\\(L = \\frac{\\lambda}{4}\\)) \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E37\u0E48\u0E19\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 \\(f = ${freq5MHz.toFixed(1)} \\text{ MHz}\\) \u0E43\u0E19\u0E2A\u0E38\u0E0D\u0E0D\u0E32\u0E01\u0E32\u0E28 (\\(c = 3.00 \\times 10^8 \\text{ m/s}\\)) \u0E08\u0E07\u0E2B\u0E32\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E2A\u0E32\u0E22\u0E2D\u0E32\u0E01\u0E32\u0E28\u0E19\u0E35\u0E49\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E40\u0E21\u0E15\u0E23 (m)`,
         unit: "m",
         correctAnswer: Math.round(antennaLen * 100) / 100,
         solutionSteps: [
-          `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatScientific(freq5Hz)}} = ${lambda5.toFixed(2)} \\text{ m}\\)`,
+          `\\(\\lambda = \\frac{c}{f} = \\frac{3.00 \\times 10^8}{${formatLatexScientific(freq5Hz)}} = ${lambda5.toFixed(2)} \\text{ m}\\)`,
           `\\(L = \\frac{\\lambda}{4} = \\frac{${lambda5.toFixed(2)}}{4} = ${antennaLen.toFixed(2)} \\text{ m}\\)`
         ]
       };
@@ -2944,31 +3021,17 @@
       if (modal) modal.classList.add("hidden");
     }
     /**
-     * Render KaTeX Math Expressions
+     * Render KaTeX Math Expressions safely via KaTeXAdapter
      */
     renderMathExpressions() {
-      if (typeof window.katex === "undefined") return;
-      const container = document.getElementById("sec-exam-live") || document.getElementById("sec-exam-result");
-      if (!container) return;
-      const targets = document.querySelectorAll(".exam-problem-content, .exam-choice-label span, #exam-solutions-container p, #exam-solutions-container li");
-      targets.forEach((node) => {
-        let html = node.innerHTML;
-        html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
-          try {
-            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-          } catch (e) {
-            return match;
-          }
-        });
-        html = html.replace(/\$(.*?)\$/g, (match, math) => {
-          try {
-            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-          } catch (e) {
-            return match;
-          }
-        });
-        node.innerHTML = html;
-      });
+      const liveContainer = document.getElementById("sec-exam-live");
+      if (liveContainer && !liveContainer.classList.contains("hidden")) {
+        KaTeXAdapter.renderAllMath(liveContainer);
+      }
+      const resultContainer = document.getElementById("sec-exam-result");
+      if (resultContainer && !resultContainer.classList.contains("hidden")) {
+        KaTeXAdapter.renderAllMath(resultContainer);
+      }
     }
   };
 
@@ -3011,14 +3074,22 @@
     }
   });
   function renderAllMathFormulas() {
+    let attempts = 0;
+    const maxAttempts = 20;
     const tryRender = () => {
+      attempts++;
       if (typeof window.katex !== "undefined") {
         KaTeXAdapter.renderAllMath(document.body);
-      } else {
-        setTimeout(tryRender, 150);
+      } else if (attempts < maxAttempts) {
+        setTimeout(tryRender, 80);
       }
     };
-    setTimeout(tryRender, 100);
+    tryRender();
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", () => {
+        KaTeXAdapter.renderAllMath(document.body);
+      });
+    }
   }
   function verifyKaTeXLoaded() {
     if (typeof window.katex !== "undefined") {
