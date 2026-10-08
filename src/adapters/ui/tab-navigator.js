@@ -1,68 +1,163 @@
 /**
  * @file tab-navigator.js
- * @description UI Adapter for tab navigation, simulator lifecycle, and exam protection lock.
+ * @description UI Adapter for section & tab navigation, simulator lifecycles, and exam protection lock.
+ * Designed according to U-17 Reference Architecture.
  */
 
 export class TabNavigatorAdapter {
   static isExamInProgress = false;
+  static currentSection = 'home';
+  static currentReviewTab = '18-1-wave';
+  static simulators = {};
 
   /**
-   * Set exam protection lock state and switch to exam tab if active
+   * Set exam protection lock state and switch to live exam section if active
    * @param {boolean} inProgress
    */
   static setExamInProgress(inProgress) {
     this.isExamInProgress = !!inProgress;
-    this.updateTabLockUI();
+    this.updateExamLockUI();
     if (this.isExamInProgress) {
-      this.switchToTab('tab-exam');
+      this.showSection('exam-live');
     }
   }
 
   /**
-   * Switch active tab view programmatically
-   * @param {string} targetTabId
+   * Update visual lock styling and classes
    */
-  static switchToTab(targetTabId) {
+  static updateExamLockUI() {
     if (typeof document === 'undefined') return;
 
-    const tabButtons = document.querySelectorAll('.nav-tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabButtons.forEach((b) => {
-      if (b.getAttribute('data-tab') === targetTabId) {
-        b.classList.add('active');
-      } else {
-        b.classList.remove('active');
-      }
-    });
-
-    tabContents.forEach((content) => {
-      if (content.id === targetTabId) {
-        content.classList.remove('hidden');
-      } else {
-        content.classList.add('hidden');
-      }
-    });
+    if (this.isExamInProgress) {
+      document.documentElement.classList.add('exam-locked');
+      document.body.classList.add('exam-locked');
+    } else {
+      document.documentElement.classList.remove('exam-locked');
+      document.body.classList.remove('exam-locked');
+    }
   }
 
   /**
-   * Update visual lock styling on tab buttons
+   * Show target section and hide others (home, review, practice, exam-start, exam-live, exam-result)
+   * @param {string} sectionId
    */
-  static updateTabLockUI() {
+  static showSection(sectionId) {
     if (typeof document === 'undefined') return;
-    const tabButtons = document.querySelectorAll('.nav-tab-btn');
-    tabButtons.forEach((btn) => {
-      const tabId = btn.getAttribute('data-tab');
-      if (tabId !== 'tab-exam') {
-        if (this.isExamInProgress) {
-          btn.classList.add('opacity-40', 'cursor-not-allowed');
-          btn.setAttribute('title', 'อยู่ระหว่างการสอบ ไม่สามารถเข้าถึงแท็บนี้ได้');
+
+    // Exam protection lock
+    if (this.isExamInProgress && sectionId !== 'exam-live' && sectionId !== 'exam-result') {
+      alert('⚠️ อยู่ระหว่างการทำข้อสอบเก็บคะแนน (15 นาที)!\nคุณกำลังทำข้อสอบอยู่ ไม่สามารถเปลี่ยนไปหน้าอื่นได้จนกว่าจะส่งข้อสอบ');
+      return;
+    }
+
+    this.currentSection = sectionId;
+    const sections = ['home', 'review', 'practice', 'exam-start', 'exam-live', 'exam-result'];
+
+    sections.forEach((id) => {
+      const el = document.getElementById(`sec-${id}`);
+      if (el) {
+        if (id === sectionId) {
+          el.classList.remove('hidden');
         } else {
-          btn.classList.remove('opacity-40', 'cursor-not-allowed');
-          btn.removeAttribute('title');
+          el.classList.add('hidden');
         }
       }
     });
+
+    // Close mobile menu if open
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenu) {
+      mobileMenu.classList.add('hidden');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Manage simulator lifecycles
+    if (sectionId === 'review') {
+      this.handleSimulatorLifecycle(this.currentReviewTab);
+    } else {
+      if (this.simulators.emWaveSim) {
+        this.simulators.emWaveSim.pause();
+      }
+    }
+  }
+
+  /**
+   * Switch review tab (18-1-wave, 18-2-spectrum, 18-3-polarization)
+   * @param {string} tabId
+   */
+  static switchReviewTab(tabId) {
+    if (typeof document === 'undefined') return;
+
+    this.currentReviewTab = tabId;
+    const tabKeys = ['18-1-wave', '18-2-spectrum', '18-3-polarization'];
+
+    tabKeys.forEach((key) => {
+      const btn = document.getElementById(`btn-tab-${key}`);
+      const content = document.getElementById(`review-tab-${key}`);
+
+      if (btn) {
+        if (key === tabId) {
+          btn.className = 'flex-1 min-w-[160px] text-center py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all duration-200 bg-white text-blue-600 shadow-sm cursor-pointer';
+        } else {
+          btn.className = 'flex-1 min-w-[160px] text-center py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all duration-200 text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 cursor-pointer';
+        }
+      }
+
+      if (content) {
+        if (key === tabId) {
+          content.classList.remove('hidden');
+        } else {
+          content.classList.add('hidden');
+        }
+      }
+    });
+
+    this.handleSimulatorLifecycle(tabId);
+  }
+
+  /**
+   * Manage active simulator lifecycle on sub-tab switch
+   * @param {string} tabId
+   */
+  static handleSimulatorLifecycle(tabId) {
+    const { emWaveSim, spectrumSim, polarizationSim } = this.simulators;
+
+    if (tabId === '18-1-wave') {
+      if (emWaveSim) emWaveSim.start();
+    } else {
+      if (emWaveSim) emWaveSim.pause();
+    }
+
+    if (tabId === '18-2-spectrum') {
+      if (spectrumSim) spectrumSim.render();
+    }
+
+    if (tabId === '18-3-polarization') {
+      if (polarizationSim) polarizationSim.render();
+    }
+  }
+
+  /**
+   * Toggle mobile navigation menu
+   */
+  static toggleMobileMenu() {
+    if (typeof document === 'undefined') return;
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenu) {
+      mobileMenu.classList.toggle('hidden');
+    }
+  }
+
+  /**
+   * Backward-compatibility wrapper for switchToTab
+   * @param {string} targetTabId
+   */
+  static switchToTab(targetTabId) {
+    if (targetTabId === 'tab-review') this.showSection('review');
+    else if (targetTabId === 'tab-practice') this.showSection('practice');
+    else if (targetTabId === 'tab-exam') this.showSection(this.isExamInProgress ? 'exam-live' : 'exam-start');
+    else this.showSection(targetTabId.replace(/^tab-|^sec-/, ''));
   }
 
   /**
@@ -70,50 +165,20 @@ export class TabNavigatorAdapter {
    * @param {Object} simulators - Dictionary of simulators { emWaveSim, spectrumSim, polarizationSim }
    */
   static init(simulators = {}) {
-    const tabButtons = document.querySelectorAll('.nav-tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+    this.simulators = simulators;
 
-    tabButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const targetTabId = btn.getAttribute('data-tab');
+    // Attach navigation helper functions to global window object
+    if (typeof window !== 'undefined') {
+      window.showSection = (sectionId) => this.showSection(sectionId);
+      window.switchReviewTab = (tabId) => this.switchReviewTab(tabId);
+      window.toggleMobileMenu = () => this.toggleMobileMenu();
+    }
 
-        // Block navigation if exam is currently in progress
-        if (this.isExamInProgress && targetTabId !== 'tab-exam') {
-          e.preventDefault();
-          e.stopPropagation();
-          alert('⚠️ อยู่ระหว่างการทำข้อสอบเก็บคะแนน (15 นาที)!\nระบบไม่อนุญาตให้เปลี่ยนไปดูเนื้อหาหรือฝึกทำโจทย์ในแท็บอื่นจนกว่าจะส่งข้อสอบ');
-          return;
-        }
-
-        // Update button active states
-        tabButtons.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Toggle tab content visibility
-        tabContents.forEach((content) => {
-          if (content.id === targetTabId) {
-            content.classList.remove('hidden');
-          } else {
-            content.classList.add('hidden');
-          }
-        });
-
-        // Manage simulator lifecycle on tab switch
-        if (targetTabId === 'tab-review') {
-          if (simulators.emWaveSim) simulators.emWaveSim.start();
-          if (simulators.spectrumSim) simulators.spectrumSim.render();
-          if (simulators.polarizationSim) simulators.polarizationSim.render();
-        } else {
-          // Pause animation when leaving review tab to save CPU/GPU
-          if (simulators.emWaveSim) simulators.emWaveSim.pause();
-        }
-      });
-    });
-
-    // If an exam session was resumed during initialization, ensure exam tab is active
+    // Default to home section unless an active exam session was restored
     if (this.isExamInProgress) {
-      this.switchToTab('tab-exam');
-      this.updateTabLockUI();
+      this.showSection('exam-live');
+    } else {
+      this.showSection('home');
     }
   }
 }

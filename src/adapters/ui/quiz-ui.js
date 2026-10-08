@@ -1,242 +1,250 @@
 /**
  * @file quiz-ui.js
- * @description UI Adapter for rendering the Practice & Quiz System in Tab 2.
- * Manages problem card rendering, KaTeX formula evaluation, and solution steps display.
+ * @description UI Adapter for rendering the Practice & Quiz System in #sec-practice.
+ * Follows U-17 Reference UI Architecture.
  */
 
 import { QuizManager } from '../../application/quiz-manager.js';
 import { KaTeXAdapter } from '../formula/katex-adapter.js';
 
 export class QuizUIAdapter {
-  /**
-   * @param {HTMLElement} containerElement - Container element for quiz UI
-   */
-  constructor(containerElement) {
-    this.container = containerElement;
+  constructor() {
     this.quizManager = new QuizManager(1);
-    this.currentCategory = 'mixed';
-    this.currentQuestionIndex = 0;
+    this.currentTopic = '18.1';
+    this.currentMode = 'standard';
+    this.currentQuestion = null;
+    this.questionCount = 0;
 
-    this.renderLayout();
+    this.init();
   }
 
-  /**
-   * Render overall Quiz System layout into container
-   */
-  renderLayout() {
-    if (!this.container) return;
+  init() {
+    if (typeof document === 'undefined') return;
 
-    this.container.innerHTML = `
-      <div class="space-y-6">
-        
-        <!-- Header & Category Filter Bar -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-          <div class="flex items-center gap-3">
-            <label for="input-quiz-roll" class="text-sm font-semibold text-slate-300">
-              เลขที่ผู้เรียน (R):
-            </label>
-            <input type="number" id="input-quiz-roll" min="1" max="40" value="${this.quizManager.rollNumber}"
-              class="w-20 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-center focus:border-blue-500 focus:outline-none" />
-          </div>
+    // Attach global functions to window
+    if (typeof window !== 'undefined') {
+      window.currentPracticeTopic = this.currentTopic;
+      window.startPracticeMode = (topic) => this.startPracticeMode(topic);
+      window.regeneratePractice = () => this.generateQuestion();
+      window.checkPracticeAnswer = () => this.checkNumericAnswer();
+      window.checkPracticeChoice = (cIdx) => this.checkChoiceAnswer(cIdx);
+    }
 
-          <!-- Category Selection Pills -->
-          <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-blue-600 text-white" data-cat="mixed">
-              🔀 ทั้งหมด (ผสม)
-            </button>
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700" data-cat="18.1">
-              18.1 คลื่น E&B (c=fλ)
-            </button>
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700" data-cat="18.2">
-              18.2 สเปกตรัม (E=hf)
-            </button>
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700" data-cat="18.3">
-              18.3 โพลาไรเซชัน (มาลุส)
-            </button>
-          </div>
-        </div>
-
-        <!-- Question Card Placeholder -->
-        <div id="quiz-question-card" class="space-y-6"></div>
-
-      </div>
-    `;
-
-    this._bindEvents();
-    this.loadQuestion();
-  }
-
-  /**
-   * Bind event listeners for Roll Number and Category buttons
-   */
-  _bindEvents() {
-    const rollInput = this.container.querySelector('#input-quiz-roll');
+    const rollInput = document.getElementById('prac-student-roll');
     if (rollInput) {
       rollInput.addEventListener('change', (e) => {
-        const newR = parseInt(e.target.value, 10);
-        this.quizManager.setRollNumber(newR);
-        this.loadQuestion();
-
-        // Also sync header status badge
-        const headerStatus = document.getElementById('header-user-status');
-        if (headerStatus) headerStatus.textContent = `เลขที่ #${this.quizManager.rollNumber}`;
+        const roll = parseInt(e.target.value, 10);
+        this.quizManager.setRollNumber(roll);
+        this.generateQuestion();
       });
     }
 
-    const catButtons = this.container.querySelectorAll('.quiz-cat-btn');
-    catButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        catButtons.forEach((b) => {
-          b.className = 'quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700';
-        });
-        btn.className = 'quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-blue-600 text-white';
-
-        this.currentCategory = btn.getAttribute('data-cat');
-        this.currentQuestionIndex = 0;
-        this.loadQuestion();
+    const modeSelect = document.getElementById('prac-mode-select');
+    if (modeSelect) {
+      modeSelect.addEventListener('change', (e) => {
+        this.currentMode = e.target.value;
+        this.generateQuestion();
       });
+    }
+
+    const inputVal1 = document.getElementById('prac-input-val1');
+    if (inputVal1) {
+      inputVal1.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') this.checkNumericAnswer();
+      });
+    }
+
+    // Initial load
+    this.startPracticeMode('18.1');
+  }
+
+  /**
+   * Switch practice topic (18.1, 18.2, 18.3)
+   * @param {string} topic
+   */
+  startPracticeMode(topic) {
+    this.currentTopic = topic;
+    if (typeof window !== 'undefined') window.currentPracticeTopic = topic;
+
+    // Update active styling on 3 topic cards
+    const topics = ['18.1', '18.2', '18.3'];
+    topics.forEach((t) => {
+      const btn = document.getElementById(`btn-prac-${t.replace('.', '-')}`);
+      if (btn) {
+        if (t === topic) {
+          btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50/50');
+        } else {
+          btn.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50/50');
+        }
+      }
     });
+
+    this.generateQuestion();
   }
 
   /**
-   * Load active question card
+   * Generate next question
    */
-  loadQuestion() {
-    const q = this.quizManager.generateQuestion(this.currentQuestionIndex, this.currentCategory);
-    const cardContainer = this.container.querySelector('#quiz-question-card');
-    if (!cardContainer || !q) return;
+  generateQuestion() {
+    this.questionCount++;
+    this.currentQuestion = this.quizManager.generateQuestion(this.questionCount, this.currentTopic);
+    if (!this.currentQuestion) return;
 
-    cardContainer.innerHTML = `
-      <div class="glass-panel p-6 space-y-6 border-l-4 border-l-blue-500 animate-fade-in">
-        
-        <!-- Question Topic & Header -->
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">${q.topic}</span>
-            <h3 class="text-xl font-bold text-white mt-2">${q.title}</h3>
-          </div>
-          <span class="text-xs font-mono text-slate-400">ข้อที่ ${this.currentQuestionIndex + 1}</span>
-        </div>
+    const titleEl = document.getElementById('prac-question-title');
+    const textEl = document.getElementById('prac-question-text');
+    const choiceZone = document.getElementById('prac-choice-zone');
+    const numericZone = document.getElementById('prac-numeric-zone');
+    const feedbackBox = document.getElementById('prac-feedback');
+    const explBox = document.getElementById('prac-explanation-box');
+    const inputVal1 = document.getElementById('prac-input-val1');
 
-        <!-- Problem Description Text -->
-        <div id="quiz-problem-text" class="text-slate-200 text-base leading-relaxed bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-          ${q.problemText}
-        </div>
+    // Reset feedback and explanation
+    if (feedbackBox) {
+      feedbackBox.classList.add('hidden');
+      feedbackBox.innerHTML = '';
+    }
+    if (explBox) explBox.classList.add('hidden');
+    if (inputVal1) inputVal1.value = '';
 
-        <!-- Input & Answer Action Form -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
-          <div class="flex items-center gap-2 flex-grow">
-            <label for="input-quiz-answer" class="text-sm font-semibold text-slate-300 whitespace-nowrap">
-              คำตอบของคุณ:
-            </label>
-            <input type="number" id="input-quiz-answer" step="any" placeholder="กรอกตัวเลขคำตอบ..."
-              class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-lg focus:border-blue-500 focus:outline-none" />
-            <span class="text-sm font-bold text-blue-400 bg-blue-950/60 px-3 py-2.5 rounded-lg border border-blue-800/60 font-mono">
-              ${q.unit}
-            </span>
-          </div>
+    if (titleEl) {
+      titleEl.textContent = `📋 ข้อคำถาม (${this.currentQuestion.topic}) - ${this.currentQuestion.title}:`;
+    }
 
-          <div class="flex items-center gap-3">
-            <button id="btn-submit-answer" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
-              <span>✅</span> <span>ตรวจคำตอบ</span>
-            </button>
-            <button id="btn-next-question" class="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm transition-colors flex items-center justify-center gap-2">
-              <span>🔄</span> <span>โจทย์ข้อถัดไป</span>
-            </button>
-          </div>
-        </div>
+    if (textEl) {
+      textEl.innerHTML = this.currentQuestion.problemText;
+    }
 
-        <!-- Feedback & Solution Steps Card (Initially Hidden) -->
-        <div id="quiz-feedback-card" class="hidden space-y-4"></div>
+    // Toggle choice vs numeric input
+    if (this.currentQuestion.type === 'choice') {
+      if (choiceZone) choiceZone.classList.remove('hidden');
+      if (numericZone) numericZone.classList.add('hidden');
+      this.renderChoices();
+    } else {
+      if (choiceZone) choiceZone.classList.add('hidden');
+      if (numericZone) numericZone.classList.remove('hidden');
 
-      </div>
-    `;
+      const lblInput = document.getElementById('lbl-prac-input-1');
+      if (lblInput) {
+        lblInput.textContent = `คำตอบ (${this.currentQuestion.unit || 'ตัวเลข'}):`;
+      }
+    }
 
-    // Render Math Expressions in Problem Text
     this.renderMathExpressions();
-
-    // Bind Answer Submission Events
-    const btnSubmit = cardContainer.querySelector('#btn-submit-answer');
-    const btnNext = cardContainer.querySelector('#btn-next-question');
-    const inputAnswer = cardContainer.querySelector('#input-quiz-answer');
-
-    if (btnSubmit) {
-      btnSubmit.addEventListener('click', () => this.handleSubmission());
-    }
-
-    if (inputAnswer) {
-      inputAnswer.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') this.handleSubmission();
-      });
-    }
-
-    if (btnNext) {
-      btnNext.addEventListener('click', () => {
-        this.currentQuestionIndex++;
-        this.loadQuestion();
-      });
-    }
   }
 
   /**
-   * Evaluate and display feedback + LaTeX solution steps
+   * Render choice buttons
    */
-  handleSubmission() {
-    const cardContainer = this.container.querySelector('#quiz-question-card');
-    const inputAnswer = cardContainer.querySelector('#input-quiz-answer');
-    const feedbackCard = cardContainer.querySelector('#quiz-feedback-card');
+  renderChoices() {
+    const choiceZone = document.getElementById('prac-choice-zone');
+    if (!choiceZone || !this.currentQuestion.choices) return;
 
-    if (!inputAnswer || !feedbackCard) return;
+    choiceZone.innerHTML = this.currentQuestion.choices
+      .map(
+        (choice, idx) => `
+        <button onclick="checkPracticeChoice(${idx})"
+          class="prac-choice-btn w-full p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-slate-800 text-left font-medium text-sm transition-all flex items-center gap-3 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold flex items-center justify-center shrink-0">
+            ${['ก', 'ข', 'ค', 'ง'][idx] || idx + 1}
+          </span>
+          <span class="choice-text flex-1">${choice}</span>
+        </button>
+      `
+      )
+      .join('');
+  }
 
-    const userVal = inputAnswer.value;
-    const result = this.quizManager.evaluateAnswer(userVal);
+  /**
+   * Check choice answer
+   */
+  checkChoiceAnswer(choiceIdx) {
+    if (!this.currentQuestion) return;
 
-    feedbackCard.classList.remove('hidden');
+    const isCorrect = choiceIdx === this.currentQuestion.correctChoiceIndex;
+    this.displayFeedback(isCorrect, isCorrect ? 'ถูกต้องยอดเยี่ยม!' : 'ยังไม่ถูกต้อง ลองศึกษาจากวิธีทำด้านล่าง');
+  }
 
-    const statusBadge = result.isCorrect
-      ? `<div class="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold text-base flex items-center gap-3">
-           <span class="text-2xl">🎉</span>
-           <div>
-             <div>คำตอบถูกต้องแม่นยำ!</div>
-             <div class="text-xs text-emerald-400/80 font-normal">ความคลาดเคลื่อน ${result.relativeErrorPercent}% (ผ่านเกณฑ์ 3%)</div>
-           </div>
-         </div>`
-      : `<div class="p-4 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 font-bold text-base flex items-center gap-3">
-           <span class="text-2xl">❌</span>
-           <div>
-             <div>คำตอบยังไม่ถูกต้อง</div>
-             <div class="text-xs text-red-400/80 font-normal">${result.message} — เฉลยที่ถูกต้องคือ ${result.correctAnswer} ${this.quizManager.currentQuestion.unit}</div>
-           </div>
-         </div>`;
+  /**
+   * Check numeric answer
+   */
+  checkNumericAnswer() {
+    if (!this.currentQuestion) return;
 
-    const stepsHtml = result.solutionSteps.map((step) => `<li class="leading-relaxed">${step}</li>`).join('');
+    const inputVal1 = document.getElementById('prac-input-val1');
+    const userVal = inputVal1 ? inputVal1.value.trim() : '';
 
-    feedbackCard.innerHTML = `
-      ${statusBadge}
-      <div class="bg-slate-900/90 p-5 rounded-xl border border-slate-800 space-y-3">
-        <h4 class="text-sm font-bold text-amber-400 flex items-center gap-2">
-          <span>💡</span> เฉลยวิธีทำอย่างละเอียด (Step-by-Step Solution):
-        </h4>
-        <ol id="quiz-solution-steps-list" class="list-decimal list-inside space-y-2 text-sm text-slate-200">
-          ${stepsHtml}
+    if (!userVal) {
+      alert('กรุณากรอกตัวเลขคำตอบก่อนกดตรวจคำตอบ');
+      return;
+    }
+
+    const evalResult = this.quizManager.evaluateAnswer(userVal);
+    this.displayFeedback(evalResult.isCorrect, evalResult.message);
+  }
+
+  /**
+   * Display feedback banner and step-by-step solution
+   */
+  displayFeedback(isCorrect, message) {
+    const feedbackBox = document.getElementById('prac-feedback');
+    const explBox = document.getElementById('prac-explanation-box');
+    const explText = document.getElementById('prac-explanation-text');
+
+    if (feedbackBox) {
+      feedbackBox.classList.remove('hidden');
+      if (isCorrect) {
+        feedbackBox.className = 'p-5 rounded-2xl border bg-emerald-50 border-emerald-200 text-emerald-900 transition-all';
+        feedbackBox.innerHTML = `
+          <div class="flex items-center gap-3 font-bold text-base text-emerald-800 mb-1">
+            <i class="fa-solid fa-circle-check text-2xl text-emerald-600"></i>
+            <span>ยินดีด้วย! คำตอบถูกต้อง 🎉</span>
+          </div>
+          <p class="text-xs text-emerald-700">${message || 'คุณคำนวณและตอบได้ถูกต้องตามหลักฟิสิกส์'}</p>
+        `;
+      } else {
+        feedbackBox.className = 'p-5 rounded-2xl border bg-red-50 border-red-200 text-red-900 transition-all';
+        feedbackBox.innerHTML = `
+          <div class="flex items-center gap-3 font-bold text-base text-red-800 mb-1">
+            <i class="fa-solid fa-circle-xmark text-2xl text-red-600"></i>
+            <span>ยังไม่ถูกต้อง ❌</span>
+          </div>
+          <p class="text-xs text-red-700">${message || 'ลองทบทวนสูตรและขั้นตอนการคำนวณในวิธีทำด้านล่าง'}</p>
+        `;
+      }
+    }
+
+    if (explBox && explText && this.currentQuestion.solutionSteps) {
+      explBox.classList.remove('hidden');
+      explText.innerHTML = `
+        <ol class="list-decimal pl-5 space-y-2">
+          ${this.currentQuestion.solutionSteps.map((step) => `<li>${step}</li>`).join('')}
         </ol>
-      </div>
-    `;
+      `;
+    }
 
-    // Render LaTeX Math in Solution Steps
     this.renderMathExpressions();
   }
 
   /**
-   * Render inline KaTeX math expressions \\(...\\)
+   * Render KaTeX mathematical expressions
    */
   renderMathExpressions() {
     if (typeof window.katex === 'undefined') return;
 
-    const textNodes = this.container.querySelectorAll('#quiz-problem-text, #quiz-solution-steps-list li');
-    textNodes.forEach((node) => {
+    const container = document.getElementById('sec-practice');
+    if (!container) return;
+
+    const targets = container.querySelectorAll('#prac-question-text, .choice-text, #prac-explanation-text li, #prac-explanation-text');
+    targets.forEach((node) => {
       let html = node.innerHTML;
       html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
+        try {
+          return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
+        } catch (e) {
+          return match;
+        }
+      });
+      html = html.replace(/\$(.*?)\$/g, (match, math) => {
         try {
           return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
         } catch (e) {

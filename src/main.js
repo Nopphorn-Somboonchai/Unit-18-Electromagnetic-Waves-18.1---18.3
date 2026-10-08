@@ -1,8 +1,8 @@
 /**
  * @file main.js
  * @description Main application entry point for Unit 18 Interactive Physics Portal.
- * Initializes Simulators, Adapters, Quiz System, Timed Exam, Tab Navigation, and KaTeX rendering.
- * Includes global error boundary for production reliability.
+ * Initializes Simulators, Adapters, Quiz System, Timed Exam, Section Navigator, and KaTeX rendering.
+ * Designed according to U-17 Reference Architecture.
  */
 
 import { APP_CONFIG } from './shared/config.js';
@@ -53,31 +53,23 @@ document.addEventListener('DOMContentLoaded', () => {
       ControlPanelAdapter.bindPolarizationControls(polarizationSim);
     }
 
-    // 4. Initialize Dynamic RNG Quiz System (Tab 2)
-    const quizContainer = document.getElementById('quiz-system-container');
-    let quizUI = null;
-    if (quizContainer) {
-      quizUI = new QuizUIAdapter(quizContainer);
-    }
+    // 4. Initialize Practice & Dynamic RNG Quiz System
+    const quizUI = new QuizUIAdapter();
 
-    // 5. Initialize Timed Exam System & Dashboard (Tab 3)
-    const examContainer = document.getElementById('exam-system-container');
-    let examUI = null;
-    if (examContainer) {
-      examUI = new ExamUIAdapter(examContainer);
-    }
+    // 5. Initialize Timed Exam System & Anti-Cheat Manager
+    const examUI = new ExamUIAdapter();
 
-    // 6. Initialize Tab Navigation Adapter
+    // 6. Initialize Section & Tab Navigation Adapter
     TabNavigatorAdapter.init({
       emWaveSim,
       spectrumSim,
       polarizationSim
     });
 
-    // 7. Initial KaTeX Formula Renderings in UI
-    renderFormulaHeadings();
+    // 7. Render All Mathematical Notation across Document
+    renderAllMathFormulas();
 
-    console.log('[Physics Portal] All modules and simulators initialized successfully.');
+    console.log('[Physics Portal] All modules and simulators initialized successfully with U-17 UI architecture.');
   } catch (err) {
     console.error('[Physics Portal Error] Failed to initialize portal modules:', err);
   }
@@ -86,13 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Render dynamic KaTeX mathematical notation into UI elements
  */
-function renderFormulaHeadings() {
-  setTimeout(() => {
-    KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.VECTOR_FIELD, 'katex-formula-18-1');
-    KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.PHOTON_ENERGY, 'katex-formula-18-2');
-    KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.MALUS_LAW, 'katex-formula-18-3');
-    KaTeXAdapter.renderAllMath(document.body);
-  }, 100);
+function renderAllMathFormulas() {
+  const tryRender = () => {
+    if (typeof window.katex !== 'undefined') {
+      KaTeXAdapter.renderAllMath(document.body);
+    } else {
+      setTimeout(tryRender, 150);
+    }
+  };
+  setTimeout(tryRender, 100);
 }
 
 /**
@@ -102,7 +96,7 @@ function verifyKaTeXLoaded() {
   if (typeof window.katex !== 'undefined') {
     console.log('[KaTeX Adapter] Local KaTeX engine loaded successfully for offline formula rendering.');
   } else {
-    console.warn('[KaTeX Adapter] KaTeX not found in global window context.');
+    console.warn('[KaTeX Adapter] KaTeX not found in global window context. Retrying...');
   }
 }
 

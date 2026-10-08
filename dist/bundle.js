@@ -1234,96 +1234,149 @@
   // src/adapters/ui/tab-navigator.js
   var TabNavigatorAdapter = class {
     static isExamInProgress = false;
+    static currentSection = "home";
+    static currentReviewTab = "18-1-wave";
+    static simulators = {};
     /**
-     * Set exam protection lock state and switch to exam tab if active
+     * Set exam protection lock state and switch to live exam section if active
      * @param {boolean} inProgress
      */
     static setExamInProgress(inProgress) {
       this.isExamInProgress = !!inProgress;
-      this.updateTabLockUI();
+      this.updateExamLockUI();
       if (this.isExamInProgress) {
-        this.switchToTab("tab-exam");
+        this.showSection("exam-live");
       }
     }
     /**
-     * Switch active tab view programmatically
-     * @param {string} targetTabId
+     * Update visual lock styling and classes
      */
-    static switchToTab(targetTabId) {
+    static updateExamLockUI() {
       if (typeof document === "undefined") return;
-      const tabButtons = document.querySelectorAll(".nav-tab-btn");
-      const tabContents = document.querySelectorAll(".tab-content");
-      tabButtons.forEach((b) => {
-        if (b.getAttribute("data-tab") === targetTabId) {
-          b.classList.add("active");
-        } else {
-          b.classList.remove("active");
-        }
-      });
-      tabContents.forEach((content) => {
-        if (content.id === targetTabId) {
-          content.classList.remove("hidden");
-        } else {
-          content.classList.add("hidden");
-        }
-      });
+      if (this.isExamInProgress) {
+        document.documentElement.classList.add("exam-locked");
+        document.body.classList.add("exam-locked");
+      } else {
+        document.documentElement.classList.remove("exam-locked");
+        document.body.classList.remove("exam-locked");
+      }
     }
     /**
-     * Update visual lock styling on tab buttons
+     * Show target section and hide others (home, review, practice, exam-start, exam-live, exam-result)
+     * @param {string} sectionId
      */
-    static updateTabLockUI() {
+    static showSection(sectionId) {
       if (typeof document === "undefined") return;
-      const tabButtons = document.querySelectorAll(".nav-tab-btn");
-      tabButtons.forEach((btn) => {
-        const tabId = btn.getAttribute("data-tab");
-        if (tabId !== "tab-exam") {
-          if (this.isExamInProgress) {
-            btn.classList.add("opacity-40", "cursor-not-allowed");
-            btn.setAttribute("title", "\u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A \u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49");
+      if (this.isExamInProgress && sectionId !== "exam-live" && sectionId !== "exam-result") {
+        alert("\u26A0\uFE0F \u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19 (15 \u0E19\u0E32\u0E17\u0E35)!\n\u0E04\u0E38\u0E13\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E2D\u0E22\u0E39\u0E48 \u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E14\u0E49\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A");
+        return;
+      }
+      this.currentSection = sectionId;
+      const sections = ["home", "review", "practice", "exam-start", "exam-live", "exam-result"];
+      sections.forEach((id) => {
+        const el = document.getElementById(`sec-${id}`);
+        if (el) {
+          if (id === sectionId) {
+            el.classList.remove("hidden");
           } else {
-            btn.classList.remove("opacity-40", "cursor-not-allowed");
-            btn.removeAttribute("title");
+            el.classList.add("hidden");
           }
         }
       });
+      const mobileMenu = document.getElementById("mobile-menu");
+      if (mobileMenu) {
+        mobileMenu.classList.add("hidden");
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (sectionId === "review") {
+        this.handleSimulatorLifecycle(this.currentReviewTab);
+      } else {
+        if (this.simulators.emWaveSim) {
+          this.simulators.emWaveSim.pause();
+        }
+      }
+    }
+    /**
+     * Switch review tab (18-1-wave, 18-2-spectrum, 18-3-polarization)
+     * @param {string} tabId
+     */
+    static switchReviewTab(tabId) {
+      if (typeof document === "undefined") return;
+      this.currentReviewTab = tabId;
+      const tabKeys = ["18-1-wave", "18-2-spectrum", "18-3-polarization"];
+      tabKeys.forEach((key) => {
+        const btn = document.getElementById(`btn-tab-${key}`);
+        const content = document.getElementById(`review-tab-${key}`);
+        if (btn) {
+          if (key === tabId) {
+            btn.className = "flex-1 min-w-[160px] text-center py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all duration-200 bg-white text-blue-600 shadow-sm cursor-pointer";
+          } else {
+            btn.className = "flex-1 min-w-[160px] text-center py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all duration-200 text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 cursor-pointer";
+          }
+        }
+        if (content) {
+          if (key === tabId) {
+            content.classList.remove("hidden");
+          } else {
+            content.classList.add("hidden");
+          }
+        }
+      });
+      this.handleSimulatorLifecycle(tabId);
+    }
+    /**
+     * Manage active simulator lifecycle on sub-tab switch
+     * @param {string} tabId
+     */
+    static handleSimulatorLifecycle(tabId) {
+      const { emWaveSim, spectrumSim, polarizationSim } = this.simulators;
+      if (tabId === "18-1-wave") {
+        if (emWaveSim) emWaveSim.start();
+      } else {
+        if (emWaveSim) emWaveSim.pause();
+      }
+      if (tabId === "18-2-spectrum") {
+        if (spectrumSim) spectrumSim.render();
+      }
+      if (tabId === "18-3-polarization") {
+        if (polarizationSim) polarizationSim.render();
+      }
+    }
+    /**
+     * Toggle mobile navigation menu
+     */
+    static toggleMobileMenu() {
+      if (typeof document === "undefined") return;
+      const mobileMenu = document.getElementById("mobile-menu");
+      if (mobileMenu) {
+        mobileMenu.classList.toggle("hidden");
+      }
+    }
+    /**
+     * Backward-compatibility wrapper for switchToTab
+     * @param {string} targetTabId
+     */
+    static switchToTab(targetTabId) {
+      if (targetTabId === "tab-review") this.showSection("review");
+      else if (targetTabId === "tab-practice") this.showSection("practice");
+      else if (targetTabId === "tab-exam") this.showSection(this.isExamInProgress ? "exam-live" : "exam-start");
+      else this.showSection(targetTabId.replace(/^tab-|^sec-/, ""));
     }
     /**
      * Initialize Tab Navigator
      * @param {Object} simulators - Dictionary of simulators { emWaveSim, spectrumSim, polarizationSim }
      */
     static init(simulators = {}) {
-      const tabButtons = document.querySelectorAll(".nav-tab-btn");
-      const tabContents = document.querySelectorAll(".tab-content");
-      tabButtons.forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const targetTabId = btn.getAttribute("data-tab");
-          if (this.isExamInProgress && targetTabId !== "tab-exam") {
-            e.preventDefault();
-            e.stopPropagation();
-            alert("\u26A0\uFE0F \u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19 (15 \u0E19\u0E32\u0E17\u0E35)!\n\u0E23\u0E30\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E44\u0E1B\u0E14\u0E39\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E2B\u0E23\u0E37\u0E2D\u0E1D\u0E36\u0E01\u0E17\u0E33\u0E42\u0E08\u0E17\u0E22\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E2D\u0E37\u0E48\u0E19\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A");
-            return;
-          }
-          tabButtons.forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          tabContents.forEach((content) => {
-            if (content.id === targetTabId) {
-              content.classList.remove("hidden");
-            } else {
-              content.classList.add("hidden");
-            }
-          });
-          if (targetTabId === "tab-review") {
-            if (simulators.emWaveSim) simulators.emWaveSim.start();
-            if (simulators.spectrumSim) simulators.spectrumSim.render();
-            if (simulators.polarizationSim) simulators.polarizationSim.render();
-          } else {
-            if (simulators.emWaveSim) simulators.emWaveSim.pause();
-          }
-        });
-      });
+      this.simulators = simulators;
+      if (typeof window !== "undefined") {
+        window.showSection = (sectionId) => this.showSection(sectionId);
+        window.switchReviewTab = (tabId) => this.switchReviewTab(tabId);
+        window.toggleMobileMenu = () => this.toggleMobileMenu();
+      }
       if (this.isExamInProgress) {
-        this.switchToTab("tab-exam");
-        this.updateTabLockUI();
+        this.showSection("exam-live");
+      } else {
+        this.showSection("home");
       }
     }
   };
@@ -1638,204 +1691,203 @@
 
   // src/adapters/ui/quiz-ui.js
   var QuizUIAdapter = class {
-    /**
-     * @param {HTMLElement} containerElement - Container element for quiz UI
-     */
-    constructor(containerElement) {
-      this.container = containerElement;
+    constructor() {
       this.quizManager = new QuizManager(1);
-      this.currentCategory = "mixed";
-      this.currentQuestionIndex = 0;
-      this.renderLayout();
+      this.currentTopic = "18.1";
+      this.currentMode = "standard";
+      this.currentQuestion = null;
+      this.questionCount = 0;
+      this.init();
     }
-    /**
-     * Render overall Quiz System layout into container
-     */
-    renderLayout() {
-      if (!this.container) return;
-      this.container.innerHTML = `
-      <div class="space-y-6">
-        
-        <!-- Header & Category Filter Bar -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-          <div class="flex items-center gap-3">
-            <label for="input-quiz-roll" class="text-sm font-semibold text-slate-300">
-              \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E40\u0E23\u0E35\u0E22\u0E19 (R):
-            </label>
-            <input type="number" id="input-quiz-roll" min="1" max="40" value="${this.quizManager.rollNumber}"
-              class="w-20 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-center focus:border-blue-500 focus:outline-none" />
-          </div>
-
-          <!-- Category Selection Pills -->
-          <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-blue-600 text-white" data-cat="mixed">
-              \u{1F500} \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (\u0E1C\u0E2A\u0E21)
-            </button>
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700" data-cat="18.1">
-              18.1 \u0E04\u0E25\u0E37\u0E48\u0E19 E&B (c=f\u03BB)
-            </button>
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700" data-cat="18.2">
-              18.2 \u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21 (E=hf)
-            </button>
-            <button class="quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700" data-cat="18.3">
-              18.3 \u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E40\u0E0B\u0E0A\u0E31\u0E19 (\u0E21\u0E32\u0E25\u0E38\u0E2A)
-            </button>
-          </div>
-        </div>
-
-        <!-- Question Card Placeholder -->
-        <div id="quiz-question-card" class="space-y-6"></div>
-
-      </div>
-    `;
-      this._bindEvents();
-      this.loadQuestion();
-    }
-    /**
-     * Bind event listeners for Roll Number and Category buttons
-     */
-    _bindEvents() {
-      const rollInput = this.container.querySelector("#input-quiz-roll");
+    init() {
+      if (typeof document === "undefined") return;
+      if (typeof window !== "undefined") {
+        window.currentPracticeTopic = this.currentTopic;
+        window.startPracticeMode = (topic) => this.startPracticeMode(topic);
+        window.regeneratePractice = () => this.generateQuestion();
+        window.checkPracticeAnswer = () => this.checkNumericAnswer();
+        window.checkPracticeChoice = (cIdx) => this.checkChoiceAnswer(cIdx);
+      }
+      const rollInput = document.getElementById("prac-student-roll");
       if (rollInput) {
         rollInput.addEventListener("change", (e) => {
-          const newR = parseInt(e.target.value, 10);
-          this.quizManager.setRollNumber(newR);
-          this.loadQuestion();
-          const headerStatus = document.getElementById("header-user-status");
-          if (headerStatus) headerStatus.textContent = `\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${this.quizManager.rollNumber}`;
+          const roll = parseInt(e.target.value, 10);
+          this.quizManager.setRollNumber(roll);
+          this.generateQuestion();
         });
       }
-      const catButtons = this.container.querySelectorAll(".quiz-cat-btn");
-      catButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          catButtons.forEach((b) => {
-            b.className = "quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-800 text-slate-300 hover:bg-slate-700";
-          });
-          btn.className = "quiz-cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-blue-600 text-white";
-          this.currentCategory = btn.getAttribute("data-cat");
-          this.currentQuestionIndex = 0;
-          this.loadQuestion();
+      const modeSelect = document.getElementById("prac-mode-select");
+      if (modeSelect) {
+        modeSelect.addEventListener("change", (e) => {
+          this.currentMode = e.target.value;
+          this.generateQuestion();
         });
+      }
+      const inputVal1 = document.getElementById("prac-input-val1");
+      if (inputVal1) {
+        inputVal1.addEventListener("keyup", (e) => {
+          if (e.key === "Enter") this.checkNumericAnswer();
+        });
+      }
+      this.startPracticeMode("18.1");
+    }
+    /**
+     * Switch practice topic (18.1, 18.2, 18.3)
+     * @param {string} topic
+     */
+    startPracticeMode(topic) {
+      this.currentTopic = topic;
+      if (typeof window !== "undefined") window.currentPracticeTopic = topic;
+      const topics = ["18.1", "18.2", "18.3"];
+      topics.forEach((t) => {
+        const btn = document.getElementById(`btn-prac-${t.replace(".", "-")}`);
+        if (btn) {
+          if (t === topic) {
+            btn.classList.add("ring-2", "ring-blue-500", "bg-blue-50/50");
+          } else {
+            btn.classList.remove("ring-2", "ring-blue-500", "bg-blue-50/50");
+          }
+        }
       });
+      this.generateQuestion();
     }
     /**
-     * Load active question card
+     * Generate next question
      */
-    loadQuestion() {
-      const q = this.quizManager.generateQuestion(this.currentQuestionIndex, this.currentCategory);
-      const cardContainer = this.container.querySelector("#quiz-question-card");
-      if (!cardContainer || !q) return;
-      cardContainer.innerHTML = `
-      <div class="glass-panel p-6 space-y-6 border-l-4 border-l-blue-500 animate-fade-in">
-        
-        <!-- Question Topic & Header -->
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">${q.topic}</span>
-            <h3 class="text-xl font-bold text-white mt-2">${q.title}</h3>
-          </div>
-          <span class="text-xs font-mono text-slate-400">\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 ${this.currentQuestionIndex + 1}</span>
-        </div>
-
-        <!-- Problem Description Text -->
-        <div id="quiz-problem-text" class="text-slate-200 text-base leading-relaxed bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-          ${q.problemText}
-        </div>
-
-        <!-- Input & Answer Action Form -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
-          <div class="flex items-center gap-2 flex-grow">
-            <label for="input-quiz-answer" class="text-sm font-semibold text-slate-300 whitespace-nowrap">
-              \u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13:
-            </label>
-            <input type="number" id="input-quiz-answer" step="any" placeholder="\u0E01\u0E23\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E04\u0E33\u0E15\u0E2D\u0E1A..."
-              class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-lg focus:border-blue-500 focus:outline-none" />
-            <span class="text-sm font-bold text-blue-400 bg-blue-950/60 px-3 py-2.5 rounded-lg border border-blue-800/60 font-mono">
-              ${q.unit}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <button id="btn-submit-answer" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
-              <span>\u2705</span> <span>\u0E15\u0E23\u0E27\u0E08\u0E04\u0E33\u0E15\u0E2D\u0E1A</span>
-            </button>
-            <button id="btn-next-question" class="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm transition-colors flex items-center justify-center gap-2">
-              <span>\u{1F504}</span> <span>\u0E42\u0E08\u0E17\u0E22\u0E4C\u0E02\u0E49\u0E2D\u0E16\u0E31\u0E14\u0E44\u0E1B</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Feedback & Solution Steps Card (Initially Hidden) -->
-        <div id="quiz-feedback-card" class="hidden space-y-4"></div>
-
-      </div>
-    `;
+    generateQuestion() {
+      this.questionCount++;
+      this.currentQuestion = this.quizManager.generateQuestion(this.questionCount, this.currentTopic);
+      if (!this.currentQuestion) return;
+      const titleEl = document.getElementById("prac-question-title");
+      const textEl = document.getElementById("prac-question-text");
+      const choiceZone = document.getElementById("prac-choice-zone");
+      const numericZone = document.getElementById("prac-numeric-zone");
+      const feedbackBox = document.getElementById("prac-feedback");
+      const explBox = document.getElementById("prac-explanation-box");
+      const inputVal1 = document.getElementById("prac-input-val1");
+      if (feedbackBox) {
+        feedbackBox.classList.add("hidden");
+        feedbackBox.innerHTML = "";
+      }
+      if (explBox) explBox.classList.add("hidden");
+      if (inputVal1) inputVal1.value = "";
+      if (titleEl) {
+        titleEl.textContent = `\u{1F4CB} \u0E02\u0E49\u0E2D\u0E04\u0E33\u0E16\u0E32\u0E21 (${this.currentQuestion.topic}) - ${this.currentQuestion.title}:`;
+      }
+      if (textEl) {
+        textEl.innerHTML = this.currentQuestion.problemText;
+      }
+      if (this.currentQuestion.type === "choice") {
+        if (choiceZone) choiceZone.classList.remove("hidden");
+        if (numericZone) numericZone.classList.add("hidden");
+        this.renderChoices();
+      } else {
+        if (choiceZone) choiceZone.classList.add("hidden");
+        if (numericZone) numericZone.classList.remove("hidden");
+        const lblInput = document.getElementById("lbl-prac-input-1");
+        if (lblInput) {
+          lblInput.textContent = `\u0E04\u0E33\u0E15\u0E2D\u0E1A (${this.currentQuestion.unit || "\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02"}):`;
+        }
+      }
       this.renderMathExpressions();
-      const btnSubmit = cardContainer.querySelector("#btn-submit-answer");
-      const btnNext = cardContainer.querySelector("#btn-next-question");
-      const inputAnswer = cardContainer.querySelector("#input-quiz-answer");
-      if (btnSubmit) {
-        btnSubmit.addEventListener("click", () => this.handleSubmission());
-      }
-      if (inputAnswer) {
-        inputAnswer.addEventListener("keyup", (e) => {
-          if (e.key === "Enter") this.handleSubmission();
-        });
-      }
-      if (btnNext) {
-        btnNext.addEventListener("click", () => {
-          this.currentQuestionIndex++;
-          this.loadQuestion();
-        });
-      }
     }
     /**
-     * Evaluate and display feedback + LaTeX solution steps
+     * Render choice buttons
      */
-    handleSubmission() {
-      const cardContainer = this.container.querySelector("#quiz-question-card");
-      const inputAnswer = cardContainer.querySelector("#input-quiz-answer");
-      const feedbackCard = cardContainer.querySelector("#quiz-feedback-card");
-      if (!inputAnswer || !feedbackCard) return;
-      const userVal = inputAnswer.value;
-      const result = this.quizManager.evaluateAnswer(userVal);
-      feedbackCard.classList.remove("hidden");
-      const statusBadge = result.isCorrect ? `<div class="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold text-base flex items-center gap-3">
-           <span class="text-2xl">\u{1F389}</span>
-           <div>
-             <div>\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E41\u0E21\u0E48\u0E19\u0E22\u0E33!</div>
-             <div class="text-xs text-emerald-400/80 font-normal">\u0E04\u0E27\u0E32\u0E21\u0E04\u0E25\u0E32\u0E14\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19 ${result.relativeErrorPercent}% (\u0E1C\u0E48\u0E32\u0E19\u0E40\u0E01\u0E13\u0E11\u0E4C 3%)</div>
-           </div>
-         </div>` : `<div class="p-4 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 font-bold text-base flex items-center gap-3">
-           <span class="text-2xl">\u274C</span>
-           <div>
-             <div>\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07</div>
-             <div class="text-xs text-red-400/80 font-normal">${result.message} \u2014 \u0E40\u0E09\u0E25\u0E22\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E04\u0E37\u0E2D ${result.correctAnswer} ${this.quizManager.currentQuestion.unit}</div>
-           </div>
-         </div>`;
-      const stepsHtml = result.solutionSteps.map((step) => `<li class="leading-relaxed">${step}</li>`).join("");
-      feedbackCard.innerHTML = `
-      ${statusBadge}
-      <div class="bg-slate-900/90 p-5 rounded-xl border border-slate-800 space-y-3">
-        <h4 class="text-sm font-bold text-amber-400 flex items-center gap-2">
-          <span>\u{1F4A1}</span> \u0E40\u0E09\u0E25\u0E22\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 (Step-by-Step Solution):
-        </h4>
-        <ol id="quiz-solution-steps-list" class="list-decimal list-inside space-y-2 text-sm text-slate-200">
-          ${stepsHtml}
+    renderChoices() {
+      const choiceZone = document.getElementById("prac-choice-zone");
+      if (!choiceZone || !this.currentQuestion.choices) return;
+      choiceZone.innerHTML = this.currentQuestion.choices.map(
+        (choice, idx) => `
+        <button onclick="checkPracticeChoice(${idx})"
+          class="prac-choice-btn w-full p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-slate-800 text-left font-medium text-sm transition-all flex items-center gap-3 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold flex items-center justify-center shrink-0">
+            ${["\u0E01", "\u0E02", "\u0E04", "\u0E07"][idx] || idx + 1}
+          </span>
+          <span class="choice-text flex-1">${choice}</span>
+        </button>
+      `
+      ).join("");
+    }
+    /**
+     * Check choice answer
+     */
+    checkChoiceAnswer(choiceIdx) {
+      if (!this.currentQuestion) return;
+      const isCorrect = choiceIdx === this.currentQuestion.correctChoiceIndex;
+      this.displayFeedback(isCorrect, isCorrect ? "\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E22\u0E2D\u0E14\u0E40\u0E22\u0E35\u0E48\u0E22\u0E21!" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 \u0E25\u0E2D\u0E07\u0E28\u0E36\u0E01\u0E29\u0E32\u0E08\u0E32\u0E01\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33\u0E14\u0E49\u0E32\u0E19\u0E25\u0E48\u0E32\u0E07");
+    }
+    /**
+     * Check numeric answer
+     */
+    checkNumericAnswer() {
+      if (!this.currentQuestion) return;
+      const inputVal1 = document.getElementById("prac-input-val1");
+      const userVal = inputVal1 ? inputVal1.value.trim() : "";
+      if (!userVal) {
+        alert("\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E01\u0E48\u0E2D\u0E19\u0E01\u0E14\u0E15\u0E23\u0E27\u0E08\u0E04\u0E33\u0E15\u0E2D\u0E1A");
+        return;
+      }
+      const evalResult = this.quizManager.evaluateAnswer(userVal);
+      this.displayFeedback(evalResult.isCorrect, evalResult.message);
+    }
+    /**
+     * Display feedback banner and step-by-step solution
+     */
+    displayFeedback(isCorrect, message) {
+      const feedbackBox = document.getElementById("prac-feedback");
+      const explBox = document.getElementById("prac-explanation-box");
+      const explText = document.getElementById("prac-explanation-text");
+      if (feedbackBox) {
+        feedbackBox.classList.remove("hidden");
+        if (isCorrect) {
+          feedbackBox.className = "p-5 rounded-2xl border bg-emerald-50 border-emerald-200 text-emerald-900 transition-all";
+          feedbackBox.innerHTML = `
+          <div class="flex items-center gap-3 font-bold text-base text-emerald-800 mb-1">
+            <i class="fa-solid fa-circle-check text-2xl text-emerald-600"></i>
+            <span>\u0E22\u0E34\u0E19\u0E14\u0E35\u0E14\u0E49\u0E27\u0E22! \u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 \u{1F389}</span>
+          </div>
+          <p class="text-xs text-emerald-700">${message || "\u0E04\u0E38\u0E13\u0E04\u0E33\u0E19\u0E27\u0E13\u0E41\u0E25\u0E30\u0E15\u0E2D\u0E1A\u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E15\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E01\u0E1F\u0E34\u0E2A\u0E34\u0E01\u0E2A\u0E4C"}</p>
+        `;
+        } else {
+          feedbackBox.className = "p-5 rounded-2xl border bg-red-50 border-red-200 text-red-900 transition-all";
+          feedbackBox.innerHTML = `
+          <div class="flex items-center gap-3 font-bold text-base text-red-800 mb-1">
+            <i class="fa-solid fa-circle-xmark text-2xl text-red-600"></i>
+            <span>\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 \u274C</span>
+          </div>
+          <p class="text-xs text-red-700">${message || "\u0E25\u0E2D\u0E07\u0E17\u0E1A\u0E17\u0E27\u0E19\u0E2A\u0E39\u0E15\u0E23\u0E41\u0E25\u0E30\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19\u0E01\u0E32\u0E23\u0E04\u0E33\u0E19\u0E27\u0E13\u0E43\u0E19\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33\u0E14\u0E49\u0E32\u0E19\u0E25\u0E48\u0E32\u0E07"}</p>
+        `;
+        }
+      }
+      if (explBox && explText && this.currentQuestion.solutionSteps) {
+        explBox.classList.remove("hidden");
+        explText.innerHTML = `
+        <ol class="list-decimal pl-5 space-y-2">
+          ${this.currentQuestion.solutionSteps.map((step) => `<li>${step}</li>`).join("")}
         </ol>
-      </div>
-    `;
+      `;
+      }
       this.renderMathExpressions();
     }
     /**
-     * Render inline KaTeX math expressions \\(...\\)
+     * Render KaTeX mathematical expressions
      */
     renderMathExpressions() {
       if (typeof window.katex === "undefined") return;
-      const textNodes = this.container.querySelectorAll("#quiz-problem-text, #quiz-solution-steps-list li");
-      textNodes.forEach((node) => {
+      const container = document.getElementById("sec-practice");
+      if (!container) return;
+      const targets = container.querySelectorAll("#prac-question-text, .choice-text, #prac-explanation-text li, #prac-explanation-text");
+      targets.forEach((node) => {
         let html = node.innerHTML;
         html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
+          try {
+            return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
+          } catch (e) {
+            return match;
+          }
+        });
+        html = html.replace(/\$(.*?)\$/g, (match, math) => {
           try {
             return window.katex.renderToString(math, { displayMode: false, throwOnError: false });
           } catch (e) {
@@ -2479,551 +2531,427 @@
 
   // src/adapters/ui/exam-ui.js
   var ExamUIAdapter = class {
-    /**
-     * @param {HTMLElement} containerElement - Container element for exam UI
-     */
-    constructor(containerElement) {
-      this.container = containerElement;
+    constructor() {
       this.examManager = new ExamManager(1);
-      this.activeQuestionIdx = 0;
+      this.tabSwitchCount = 0;
+      this.refreshCount = 0;
+      this.init();
+    }
+    init() {
+      if (typeof document === "undefined") return;
+      if (typeof window !== "undefined") {
+        window.startExamProcess = () => this.startExamProcess();
+        window.confirmSubmitExam = () => this.confirmSubmitExam();
+        window.dismissCheatWarning = () => this.dismissCheatWarning();
+        window.toggleExamSolutionBox = () => this.toggleExamSolutionBox();
+        window.showLatestResultModal = () => this.showLatestResultModal();
+        window.closeLatestResultModal = () => this.closeLatestResultModal();
+        window.recordExamAnswer = (qIdx, val) => this.recordAnswer(qIdx, val);
+      }
       this.examManager.onTickCallback = (secondsLeft, timerStr) => {
         this.updateTimerDisplay(secondsLeft, timerStr);
       };
       this.examManager.onStateChangeCallback = (state, result) => {
-        if (state === EXAM_STATES.IN_PROGRESS && this.examManager.isRecoveredSession) {
-          this.activeQuestionIdx = this.examManager.restoredActiveQuestionIdx;
+        if (state === EXAM_STATES.SUBMITTED || state === EXAM_STATES.REVIEW) {
+          TabNavigatorAdapter.setExamInProgress(false);
+          this.renderResults(result || this.examManager.examResult);
         }
-        this.renderState(state, result);
-        TabNavigatorAdapter.setExamInProgress(state === EXAM_STATES.IN_PROGRESS);
       };
-      this.setupRecoveryPersistence();
+      this.setupAntiCheatDetection();
       const savedSession = LocalStorageAdapter.loadExamSession();
       const savedResult = LocalStorageAdapter.loadExamResult();
+      if (savedResult) {
+        this.updateHomeLastScore(savedResult.totalScore);
+      }
       if (savedSession) {
         const resumed = this.examManager.resumeExamSession(savedSession);
-        if (!resumed && (this.examManager.examResult || savedResult)) {
-          const recoveredResult = this.examManager.examResult || savedResult;
-          this.examManager.examResult = recoveredResult;
-          this.renderState(EXAM_STATES.REVIEW, recoveredResult);
+        if (resumed) {
+          this.refreshCount++;
+          TabNavigatorAdapter.setExamInProgress(true);
+          this.renderActiveExamView();
         } else {
-          if (!resumed) {
-            LocalStorageAdapter.clearExamSession();
-            this.renderState(EXAM_STATES.IDLE);
-          }
+          LocalStorageAdapter.clearExamSession();
         }
-      } else if (savedResult) {
-        this.examManager.examResult = savedResult;
-        this.renderState(EXAM_STATES.REVIEW, savedResult);
-      } else {
-        this.renderState(EXAM_STATES.IDLE);
       }
     }
     /**
-     * Persist exam progress around reload, page close, or background transitions.
-     * Refresh remains available; the saved attempt is restored on the next page load.
+     * Setup Anti-Cheat tab-switch and blur detection
      */
-    setupRecoveryPersistence() {
+    setupAntiCheatDetection() {
       if (typeof window === "undefined") return;
-      const saveActiveAttempt = () => {
+      const handleVisibilityChange = () => {
         if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-          this.examManager._saveSessionState(this.activeQuestionIdx);
-        }
-      };
-      window.addEventListener("pagehide", saveActiveAttempt);
-      window.addEventListener("beforeunload", saveActiveAttempt);
-      document.addEventListener("visibilitychange", () => {
-        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
-          saveActiveAttempt();
-          if (document.visibilityState === "visible") {
+          if (document.hidden) {
+            this.tabSwitchCount++;
+            this.triggerCheatWarning("\u0E15\u0E23\u0E27\u0E08\u0E1E\u0E1A\u0E01\u0E32\u0E23\u0E2A\u0E25\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E23\u0E37\u0E2D\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E17\u0E47\u0E1A\u0E2A\u0E2D\u0E1A!");
+          } else {
             this.examManager.syncTimeRemaining();
           }
         }
+      };
+      const handleBlur = () => {
+        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+          this.tabSwitchCount++;
+          this.triggerCheatWarning("\u0E15\u0E23\u0E27\u0E08\u0E1E\u0E1A\u0E01\u0E32\u0E23\u0E04\u0E25\u0E34\u0E01\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A!");
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener("blur", handleBlur);
+      window.addEventListener("beforeunload", () => {
+        if (this.examManager.state === EXAM_STATES.IN_PROGRESS) {
+          this.examManager._saveSessionState(0);
+        }
       });
     }
     /**
-     * Render view based on state machine
+     * Trigger high-contrast floating anti-cheat warning banner
      */
-    renderState(state, data = null) {
-      if (!this.container) return;
-      switch (state) {
-        case EXAM_STATES.IN_PROGRESS:
-          this.renderActiveExamView();
-          break;
-        case EXAM_STATES.SUBMITTED:
-        case EXAM_STATES.REVIEW:
-          this.renderDashboardView(data || this.examManager.examResult);
-          break;
-        case EXAM_STATES.IDLE:
-        default:
-          this.renderStartScreenView();
-          break;
+    triggerCheatWarning(msg) {
+      const banner = document.getElementById("cheat-warning-banner");
+      const textEl = document.getElementById("cheat-warning-text");
+      if (!banner || !textEl) return;
+      textEl.textContent = `${msg} (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48 ${this.tabSwitchCount})`;
+      banner.classList.remove("hidden");
+      banner.style.opacity = "1";
+      banner.style.transform = "translateX(0)";
+      banner.classList.add("cheat-shake");
+      setTimeout(() => {
+        banner.classList.remove("cheat-shake");
+      }, 450);
+    }
+    /**
+     * Dismiss warning banner
+     */
+    dismissCheatWarning() {
+      const banner = document.getElementById("cheat-warning-banner");
+      if (banner) {
+        banner.style.opacity = "0";
+        banner.style.transform = "translateX(110%)";
+        setTimeout(() => banner.classList.add("hidden"), 350);
       }
     }
     /**
-     * 1. Start Screen View (Strict 7-Step Layout per Timed-Exam-System-Rules.md)
+     * Start exam process from start screen
      */
-    renderStartScreenView() {
-      const defaultName = this.examManager.fullName || "";
-      const defaultClass = this.examManager.className || "\u0E21.6/1";
-      const defaultRoll = this.examManager.rollNumber || 1;
-      this.container.innerHTML = `
-      <div class="glass-panel p-6 sm:p-8 space-y-6 max-w-3xl mx-auto text-left border-t-4 border-t-emerald-500 animate-fade-in">
-        
-        <!-- Step 1: Assessment Icon & Subject Marker -->
-        <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
-          <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-3xl shrink-0 shadow-lg shadow-emerald-500/10">
-            \u{1F393}
-          </div>
-          <div>
-            <!-- Step 2: Exam Title -->
-            <h2 class="text-2xl font-bold text-white tracking-tight">\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19 \u0E21.6</h2>
-            <!-- Step 3: Subtitle -->
-            <p class="text-slate-400 text-sm mt-0.5 font-medium">
-              \u0E1A\u0E17\u0E17\u0E35\u0E48 18 \u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 (18.1 - 18.3)
-            </p>
-          </div>
-        </div>
-
-        <!-- Step 4: Rules Warning Panel (Visible BEFORE identity form & start button) -->
-        <div class="bg-gradient-to-r from-red-950/60 via-slate-900/90 to-amber-950/40 border border-red-500/40 rounded-xl p-5 space-y-3 shadow-lg shadow-red-950/20">
-          <div class="flex items-center gap-2 text-red-400 font-bold text-base border-b border-red-500/20 pb-2">
-            <span>\u{1F6A8}</span> <span>\u0E01\u0E15\u0E34\u0E01\u0E32\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A (\u0E2D\u0E48\u0E32\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21):</span>
-          </div>
-          <ul class="space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed list-none">
-            <li class="flex items-start gap-2">
-              <span class="text-red-400 font-bold">\u2022</span>
-              <span>\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 <strong>5 \u0E02\u0E49\u0E2D</strong> \u0E02\u0E49\u0E2D\u0E25\u0E30 2 \u0E04\u0E30\u0E41\u0E19\u0E19 (\u0E04\u0E30\u0E41\u0E19\u0E19\u0E40\u0E15\u0E47\u0E21 <strong>10 \u0E04\u0E30\u0E41\u0E19\u0E19</strong>)</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400 font-bold">\u2022</span>
-              <span>\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32: 18.1 \u0E01\u0E32\u0E23\u0E40\u0E01\u0E34\u0E14\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32, 18.2 \u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32 (\\(E = hf\\)), 18.3 \u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E40\u0E0B\u0E0A\u0E31\u0E19 (\\(I = I_0 \\cos^2 \\theta\\))</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400 font-bold">\u2022</span>
-              <span>\u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E40\u0E27\u0E25\u0E32\u0E08\u0E33\u0E01\u0E31\u0E14\u0E43\u0E19\u0E01\u0E32\u0E23\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A <strong>15 \u0E19\u0E32\u0E17\u0E35</strong> (\u0E19\u0E31\u0E1A\u0E16\u0E2D\u0E22\u0E2B\u0E25\u0E31\u0E07)</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400 font-bold">\u2022</span>
-              <span>\u0E01\u0E32\u0E23\u0E15\u0E2D\u0E1A\u0E04\u0E33\u0E16\u0E32\u0E21\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E04\u0E33\u0E19\u0E27\u0E13\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 \u0E43\u0E2B\u0E49\u0E1B\u0E49\u0E2D\u0E19\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E28\u0E19\u0E34\u0E22\u0E21\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19 <strong>2 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07</strong></span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-amber-400 font-bold">\u2022</span>
-              <span class="text-amber-200 font-semibold">\u0E2B\u0E32\u0E01\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E2B\u0E23\u0E37\u0E2D\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32 \u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A \u0E04\u0E33\u0E15\u0E2D\u0E1A \u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33 \u0E42\u0E14\u0E22\u0E19\u0E31\u0E1A\u0E40\u0E27\u0E25\u0E32\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E27\u0E25\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E27\u0E25\u0E32</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400 font-bold">\u2022</span>
-              <span class="text-red-300 font-semibold">\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A \u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E22\u0E31\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E2B\u0E23\u0E37\u0E2D\u0E41\u0E1A\u0E1A\u0E1D\u0E36\u0E01\u0E2B\u0E31\u0E14\u0E20\u0E32\u0E22\u0E43\u0E19\u0E41\u0E2D\u0E1B\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A</span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Step 5: Learner Identity Form -->
-        <div class="bg-slate-900/80 p-5 rounded-xl border border-slate-800 space-y-4">
-          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-            <span>\u{1F464}</span> <span>\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1C\u0E39\u0E49\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E2D\u0E1A:</span>
-          </h3>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Full Name -->
-            <div class="space-y-1.5 md:col-span-1">
-              <label for="input-exam-name" class="block text-xs font-semibold text-slate-300">
-                \u0E0A\u0E37\u0E48\u0E2D-\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25\u0E1C\u0E39\u0E49\u0E2A\u0E2D\u0E1A <span class="text-red-400">*</span>:
-              </label>
-              <input type="text" id="input-exam-name" value="${defaultName}" placeholder="\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07 \u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25"
-                class="w-full px-3.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors" />
-            </div>
-
-            <!-- Room Select (\u0E21.6/1 - \u0E21.6/5) -->
-            <div class="space-y-1.5">
-              <label for="select-exam-class" class="block text-xs font-semibold text-slate-300">
-                \u0E0A\u0E31\u0E49\u0E19 \u0E21.6 / \u0E2B\u0E49\u0E2D\u0E07 <span class="text-red-400">*</span>:
-              </label>
-              <select id="select-exam-class"
-                class="w-full px-3.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors">
-                <option value="\u0E21.6/1" ${defaultClass === "\u0E21.6/1" ? "selected" : ""}>\u0E21.6/1</option>
-                <option value="\u0E21.6/2" ${defaultClass === "\u0E21.6/2" ? "selected" : ""}>\u0E21.6/2</option>
-                <option value="\u0E21.6/3" ${defaultClass === "\u0E21.6/3" ? "selected" : ""}>\u0E21.6/3</option>
-                <option value="\u0E21.6/4" ${defaultClass === "\u0E21.6/4" ? "selected" : ""}>\u0E21.6/4</option>
-                <option value="\u0E21.6/5" ${defaultClass === "\u0E21.6/5" ? "selected" : ""}>\u0E21.6/5</option>
-              </select>
-            </div>
-
-            <!-- Student Roll Number -->
-            <div class="space-y-1.5">
-              <label for="input-exam-roll" class="block text-xs font-semibold text-slate-300">
-                \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 <span class="text-red-400">*</span>:
-              </label>
-              <input type="number" id="input-exam-roll" min="1" max="40" value="${defaultRoll}" placeholder="1-40"
-                class="w-full px-3.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-sm focus:border-emerald-500 focus:outline-none transition-colors" />
-            </div>
-          </div>
-
-          <div id="exam-identity-error" class="hidden text-xs text-red-400 font-semibold pt-1">
-            \u26A0\uFE0F \u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D-\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E19 \u0E41\u0E25\u0E30\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07 1-40 \u0E43\u0E2B\u0E49\u0E04\u0E23\u0E1A\u0E16\u0E49\u0E27\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A
-          </div>
-        </div>
-
-        <!-- Step 6 & Step 7: Actions (Back & Start Button) -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          <!-- Step 6: Back or Cancel Action -->
-          <button id="btn-back-to-review" class="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition-colors border border-slate-700 flex items-center justify-center gap-2">
-            <span>\u2190</span> <span>\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E1A\u0E17\u0E27\u0E19\u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E19</span>
-          </button>
-
-          <!-- Step 7: Primary Start Action -->
-          <button id="btn-start-exam" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-            <span>\u{1F680}</span> <span>\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E33\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E17\u0E31\u0E19\u0E17\u0E35</span>
-          </button>
-        </div>
-
-      </div>
-    `;
-      this._bindStartScreenEvents();
-      this.renderMathExpressions();
+    startExamProcess() {
+      const nameInput = document.getElementById("exam-student-name");
+      const classSelect = document.getElementById("exam-student-class");
+      const rollInput = document.getElementById("exam-student-no");
+      const fullName = nameInput ? nameInput.value.trim() : "";
+      const className = classSelect ? `\u0E21.${classSelect.value}` : "\u0E21.6/1";
+      const rollNumber = rollInput ? parseInt(rollInput.value, 10) : 1;
+      if (!fullName) {
+        alert("\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D-\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A");
+        if (nameInput) nameInput.focus();
+        return;
+      }
+      if (isNaN(rollNumber) || rollNumber < 1 || rollNumber > 40) {
+        alert("\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07 1 \u0E16\u0E36\u0E07 40");
+        if (rollInput) rollInput.focus();
+        return;
+      }
+      this.tabSwitchCount = 0;
+      this.refreshCount = 0;
+      this.examManager.setIdentity(fullName, className, rollNumber);
+      this.examManager.startExam();
+      TabNavigatorAdapter.setExamInProgress(true);
+      this.renderActiveExamView();
     }
     /**
-     * Bind event listeners and real-time validation for start screen
-     */
-    _bindStartScreenEvents() {
-      const inputName = this.container.querySelector("#input-exam-name");
-      const selectClass = this.container.querySelector("#select-exam-class");
-      const inputRoll = this.container.querySelector("#input-exam-roll");
-      const btnStart = this.container.querySelector("#btn-start-exam");
-      const btnBack = this.container.querySelector("#btn-back-to-review");
-      const errorBox = this.container.querySelector("#exam-identity-error");
-      const validateForm = () => {
-        const nameVal = inputName ? inputName.value.trim() : "";
-        const classVal = selectClass ? selectClass.value : "";
-        const rollVal = inputRoll ? parseInt(inputRoll.value, 10) : 0;
-        const isValid = nameVal.length > 0 && classVal.length > 0 && rollVal >= 1 && rollVal <= 40;
-        if (btnStart) {
-          btnStart.disabled = !isValid;
-          if (isValid) {
-            btnStart.className = "w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 cursor-pointer";
-          } else {
-            btnStart.className = "w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-base transition-all border border-slate-700 flex items-center justify-center gap-3 cursor-not-allowed opacity-60";
-          }
-        }
-        return isValid;
-      };
-      if (inputName) inputName.addEventListener("input", validateForm);
-      if (selectClass) selectClass.addEventListener("change", validateForm);
-      if (inputRoll) inputRoll.addEventListener("input", validateForm);
-      validateForm();
-      if (btnStart) {
-        btnStart.addEventListener("click", () => {
-          const nameVal = inputName ? inputName.value.trim() : "";
-          const classVal = selectClass ? selectClass.value : "\u0E21.6/1";
-          const rollVal = inputRoll ? parseInt(inputRoll.value, 10) : 1;
-          if (!validateForm()) {
-            if (errorBox) errorBox.classList.remove("hidden");
-            return;
-          }
-          if (errorBox) errorBox.classList.add("hidden");
-          this.examManager.setIdentity(nameVal, classVal, rollVal);
-          this.examManager.startExam();
-        });
-      }
-      if (btnBack) {
-        btnBack.addEventListener("click", () => {
-          TabNavigatorAdapter.switchToTab("tab-review");
-        });
-      }
-    }
-    /**
-     * 2. Active Exam View
+     * Render all 5 questions into #sec-exam-live
      */
     renderActiveExamView() {
-      const q = this.examManager.questions[this.activeQuestionIdx];
-      if (!q) return;
-      this.container.innerHTML = `
-      <div class="space-y-6">
-
-        ${this.examManager.isRecoveredSession ? `
-          <div role="status" aria-live="polite" class="rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100 flex items-start gap-3">
-            <span aria-hidden="true">\u21BB</span>
-            <div>
-              <div class="font-bold text-emerald-300">\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27</div>
-              <div class="text-xs text-emerald-100/80 mt-0.5">\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E16\u0E39\u0E01\u0E19\u0E33\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27 \u0E40\u0E27\u0E25\u0E32\u0E22\u0E31\u0E07\u0E04\u0E07\u0E19\u0E31\u0E1A\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E27\u0E25\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2A\u0E2D\u0E1A\u0E40\u0E14\u0E34\u0E21</div>
-            </div>
-          </div>
-        ` : ""}
-        
-        <!-- Active Exam Header Bar -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-          <!-- Question Status Pills -->
-          <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-            ${this.examManager.questions.map((_, idx) => {
-        const isAnswered = this.examManager.userAnswers[idx] !== void 0 && this.examManager.userAnswers[idx] !== "";
-        const isActive = idx === this.activeQuestionIdx;
-        let btnClass = "bg-slate-800 text-slate-400 border-slate-700";
-        if (isAnswered) btnClass = "bg-emerald-950/80 text-emerald-300 border-emerald-500/40";
-        if (isActive) btnClass = "bg-blue-600 text-white border-blue-400 ring-2 ring-blue-500/50";
-        return `<button class="exam-q-pill px-3 py-1.5 rounded-lg text-xs font-bold font-mono border transition-all ${btnClass}" data-idx="${idx}">
-                        \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 ${idx + 1} ${isAnswered ? "\u2713" : ""}
-                      </button>`;
-      }).join("")}
+      const container = document.getElementById("exam-questions-container");
+      const userInfoEl = document.getElementById("lbl-exam-user-info");
+      if (!container) return;
+      if (userInfoEl) {
+        userInfoEl.textContent = `\u0E1C\u0E39\u0E49\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E2D\u0E1A: ${this.examManager.fullName} (${this.examManager.className}) \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 ${this.examManager.rollNumber}`;
+      }
+      container.innerHTML = this.examManager.questions.map((q, idx) => {
+        const currentAns = this.examManager.userAnswers[idx] ?? "";
+        return `
+        <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <span class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+              \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 ${idx + 1} \u2022 ${q.topic}
+            </span>
+            <span class="text-xs font-bold font-mono text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+              2.0 \u0E04\u0E30\u0E41\u0E19\u0E19
+            </span>
           </div>
 
-          <!-- Timer & Submit Actions -->
-          <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            <div id="active-exam-timer" class="text-xl font-bold font-mono text-emerald-400 bg-slate-950 px-3.5 py-1.5 rounded-lg border border-slate-800">
-              ${this.examManager.formatTimerString()}
-            </div>
-            <button id="btn-submit-exam-now" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-colors shadow-lg shadow-red-600/20">
-              \u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A
-            </button>
-          </div>
-        </div>
+          <h4 class="text-base font-bold text-slate-800">${q.title}</h4>
 
-        <!-- Question Card -->
-        <div class="glass-panel p-6 space-y-6 border-l-4 border-l-blue-500 animate-fade-in">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">${q.topic}</span>
-            <span class="text-xs font-mono text-amber-400 font-bold">2 \u0E04\u0E30\u0E41\u0E19\u0E19</span>
-          </div>
-
-          <h3 class="text-lg font-bold text-white">${q.title}</h3>
-          
-          <div id="exam-problem-text" class="text-slate-200 text-base leading-relaxed bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+          <div class="exam-problem-content text-slate-700 bg-slate-50 p-4 md:p-5 rounded-xl border border-slate-200 text-sm md:text-base leading-relaxed math-font">
             ${q.problemText}
           </div>
 
-          <!-- Input Area (Choice vs Numeric) -->
-          <div id="exam-input-area" class="bg-slate-900/40 p-5 rounded-xl border border-slate-800">
-            ${q.type === "choice" ? this._renderChoiceInput(q) : this._renderNumericInput(q)}
-          </div>
-
-          <!-- Question Navigation Buttons -->
-          <div class="flex items-center justify-between pt-2">
-            <button id="btn-prev-q" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-sm transition-colors ${this.activeQuestionIdx === 0 ? "opacity-50 pointer-events-none" : ""}">
-              \u2190 \u0E02\u0E49\u0E2D\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32
-            </button>
-            <button id="btn-next-q" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-colors ${this.activeQuestionIdx === 4 ? "hidden" : ""}">
-              \u0E02\u0E49\u0E2D\u0E16\u0E31\u0E14\u0E44\u0E1B \u2192
-            </button>
-          </div>
-        </div>
-
-      </div>
-    `;
-      this._bindActiveExamEvents();
-      this.renderMathExpressions();
-    }
-    /**
-     * Render Choice Input for Theory Question
-     */
-    _renderChoiceInput(q) {
-      const selectedIdx = this.examManager.userAnswers[this.activeQuestionIdx];
-      return `
-      <div class="space-y-3">
-        ${q.choices.map((choiceText, cIdx) => {
-        const isChecked = String(selectedIdx) === String(cIdx);
-        return `
-            <label class="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${isChecked ? "bg-blue-950/60 border-blue-500 text-white" : "bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800"}">
-              <input type="radio" name="exam-choice" value="${cIdx}" ${isChecked ? "checked" : ""} class="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-              <span class="text-sm">${choiceText}</span>
-            </label>
-          `;
-      }).join("")}
-      </div>
-    `;
-    }
-    /**
-     * Render Numeric Input for Calculation Questions
-     */
-    _renderNumericInput(q) {
-      const currentVal = this.examManager.userAnswers[this.activeQuestionIdx] ?? "";
-      return `
-      <div class="flex items-center gap-3 max-w-md">
-        <label for="input-exam-numeric" class="text-sm font-semibold text-slate-300 whitespace-nowrap">
-          \u0E04\u0E33\u0E15\u0E2D\u0E1A:
-        </label>
-        <input type="number" id="input-exam-numeric" step="any" value="${currentVal}" placeholder="\u0E01\u0E23\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E04\u0E33\u0E15\u0E2D\u0E1A..."
-          class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono font-bold text-lg focus:border-blue-500 focus:outline-none" />
-        <span class="text-sm font-bold text-blue-400 bg-blue-950/60 px-3 py-2.5 rounded-lg border border-blue-800/60 font-mono">
-          ${q.unit}
-        </span>
-      </div>
-    `;
-    }
-    /**
-     * Bind Active Exam events
-     */
-    _bindActiveExamEvents() {
-      const qPills = this.container.querySelectorAll(".exam-q-pill");
-      qPills.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          this.activeQuestionIdx = parseInt(btn.getAttribute("data-idx"), 10);
-          this.examManager._saveSessionState(this.activeQuestionIdx);
-          this.renderActiveExamView();
-        });
-      });
-      const choiceInputs = this.container.querySelectorAll('input[name="exam-choice"]');
-      choiceInputs.forEach((radio) => {
-        radio.addEventListener("change", (e) => {
-          this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value, this.activeQuestionIdx);
-          this.renderActiveExamView();
-        });
-      });
-      const numericInput = this.container.querySelector("#input-exam-numeric");
-      if (numericInput) {
-        numericInput.addEventListener("input", (e) => {
-          this.examManager.recordAnswer(this.activeQuestionIdx, e.target.value, this.activeQuestionIdx);
-        });
-      }
-      const btnPrev = this.container.querySelector("#btn-prev-q");
-      if (btnPrev) {
-        btnPrev.addEventListener("click", () => {
-          if (this.activeQuestionIdx > 0) {
-            this.activeQuestionIdx--;
-            this.examManager._saveSessionState(this.activeQuestionIdx);
-            this.renderActiveExamView();
-          }
-        });
-      }
-      const btnNext = this.container.querySelector("#btn-next-q");
-      if (btnNext) {
-        btnNext.addEventListener("click", () => {
-          if (this.activeQuestionIdx < 4) {
-            this.activeQuestionIdx++;
-            this.examManager._saveSessionState(this.activeQuestionIdx);
-            this.renderActiveExamView();
-          }
-        });
-      }
-      const btnSubmit = this.container.querySelector("#btn-submit-exam-now");
-      if (btnSubmit) {
-        btnSubmit.addEventListener("click", () => {
-          if (confirm("\u0E04\u0E38\u0E13\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48?")) {
-            this.examManager.submitExam(false);
-          }
-        });
-      }
-    }
-    /**
-     * Update active timer string
-     */
-    updateTimerDisplay(secondsLeft, timerStr) {
-      const timerBox = this.container.querySelector("#active-exam-timer");
-      const headerTimerBox = document.getElementById("exam-timer-display");
-      if (timerBox) {
-        timerBox.textContent = timerStr;
-        if (secondsLeft < 180) {
-          timerBox.className = "text-xl font-bold font-mono text-red-400 bg-red-950/80 px-3.5 py-1.5 rounded-lg border border-red-800 animate-pulse";
-        }
-      }
-      if (headerTimerBox) {
-        headerTimerBox.textContent = timerStr;
-        if (secondsLeft < 180) {
-          headerTimerBox.className = "text-2xl font-bold font-mono text-red-400 bg-slate-900 px-4 py-2 rounded-xl border border-red-800 animate-pulse";
-        }
-      }
-    }
-    /**
-     * 3. Score Dashboard & Review View
-     */
-    renderDashboardView(res) {
-      if (!res) return;
-      const isPass = res.totalScore >= 6;
-      this.container.innerHTML = `
-      <div class="space-y-8 animate-fade-in">
-        
-        <!-- Score Overview Card -->
-        <div class="glass-panel p-6 border-t-4 ${isPass ? "border-t-emerald-500" : "border-t-amber-500"} grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          <div class="text-center md:text-left space-y-1">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">\u0E2A\u0E23\u0E38\u0E1B\u0E1C\u0E25\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19</span>
-            <h3 class="text-xl font-bold text-white">${res.fullName || "\u0E1C\u0E39\u0E49\u0E2A\u0E2D\u0E1A"} (${res.className || "\u0E21.6/1"})</h3>
-            <p class="text-xs text-slate-300 font-medium">\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48: <span class="font-mono text-emerald-400 font-bold">#${res.rollNumber}</span> | \u0E43\u0E0A\u0E49\u0E40\u0E27\u0E25\u0E32\u0E2A\u0E2D\u0E1A: ${res.formattedTimeTaken}</p>
-            <p class="text-xs text-slate-400 font-medium flex items-center gap-1.5 justify-center md:justify-start pt-0.5">
-              <span>\u{1F4C5}</span> <span>\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E1A: ${res.formattedSubmittedAt || "2 \u0E2A.\u0E04. 2569 \u0E40\u0E27\u0E25\u0E32 12:46 \u0E19."}</span>
-            </p>
-          </div>
-
-          <!-- Total Score Gauge -->
-          <div class="flex items-center justify-center gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-            <div class="text-center">
-              <div class="text-4xl font-extrabold ${isPass ? "text-emerald-400" : "text-amber-400"} font-mono">${res.totalScore}</div>
-              <div class="text-xs text-slate-400 mt-1">\u0E04\u0E30\u0E41\u0E19\u0E19\u0E40\u0E15\u0E47\u0E21 10</div>
-            </div>
-            <div class="h-10 w-px bg-slate-800"></div>
-            <div class="text-center">
-              <div class="text-2xl font-bold text-white font-mono">${res.percentage.toFixed(0)}%</div>
-              <div class="text-xs ${isPass ? "text-emerald-400" : "text-amber-400"} font-semibold mt-1">
-                ${isPass ? "\u0E1C\u0E48\u0E32\u0E19\u0E40\u0E01\u0E13\u0E11\u0E4C \u{1F389}" : "\u0E04\u0E27\u0E23\u0E17\u0E1A\u0E17\u0E27\u0E19 \u26A0\uFE0F"}
+          <!-- Answer Zone -->
+          <div class="pt-2">
+            ${q.type === "choice" ? `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${q.choices.map(
+          (choice, cIdx) => `
+                  <label class="exam-choice-label flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${String(currentAns) === String(cIdx) ? "bg-blue-50 border-blue-500 text-blue-900 font-semibold" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"}">
+                    <input type="radio" name="exam-q-${idx}" value="${cIdx}" ${String(currentAns) === String(cIdx) ? "checked" : ""} onchange="recordExamAnswer(${idx}, ${cIdx})" class="w-4 h-4 text-blue-600" />
+                    <span class="text-xs md:text-sm flex-1">${choice}</span>
+                  </label>
+                `
+        ).join("")}
               </div>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex items-center justify-center">
-            <button id="btn-retake-exam" class="w-full px-5 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
-              <span>\u{1F504}</span> <span>\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2A\u0E2D\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Question Breakdown List -->
-        <div class="space-y-6">
-          <h4 class="text-lg font-bold text-white flex items-center gap-2">
-            <span>\u{1F4CB}</span> \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E1C\u0E25\u0E01\u0E32\u0E23\u0E15\u0E2D\u0E1A\u0E23\u0E32\u0E22\u0E02\u0E49\u0E2D (Question Review):
-          </h4>
-
-          ${res.gradedQuestions.map((q, idx) => `
-            <div class="glass-panel p-5 space-y-4 border-l-4 ${q.isCorrect ? "border-l-emerald-500" : "border-l-red-500"}">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 ${idx + 1}</span>
-                  <span class="text-xs text-slate-400">${q.topic}</span>
-                </div>
-                <span class="text-xs font-bold font-mono ${q.isCorrect ? "text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-800" : "text-red-400 bg-red-950/60 px-2.5 py-1 rounded border border-red-800"}">
-                  ${q.scoreObtained} / 2 \u0E04\u0E30\u0E41\u0E19\u0E19
+            ` : `
+              <div class="flex items-center gap-3 max-w-sm">
+                <label class="text-xs font-bold text-slate-600">\u0E04\u0E33\u0E15\u0E2D\u0E1A:</label>
+                <input type="number" step="any" value="${currentAns}" placeholder="\u0E01\u0E23\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E04\u0E33\u0E15\u0E2D\u0E1A"
+                  oninput="recordExamAnswer(${idx}, this.value)"
+                  class="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-base" />
+                <span class="text-xs font-bold font-mono text-slate-500 bg-slate-100 px-3 py-2.5 rounded-xl border border-slate-200">
+                  ${q.unit || ""}
                 </span>
               </div>
-
-              <h5 class="text-base font-bold text-white">${q.title}</h5>
-              <div id="exam-problem-text-${idx}" class="text-sm text-slate-300 bg-slate-900/50 p-4 rounded-lg leading-relaxed">
-                ${q.problemText}
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-                <div class="p-3 rounded-lg ${q.isCorrect ? "bg-emerald-950/30 border border-emerald-800/40 text-emerald-200" : "bg-red-950/30 border border-red-800/40 text-red-200"}">
-                  \u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13: <span class="font-bold text-sm ml-1">${q.userAnswer} ${q.unit || ""}</span>
-                </div>
-                <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
-                  \u0E40\u0E09\u0E25\u0E22\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07: <span class="font-bold text-sm text-emerald-400 ml-1">${q.type === "choice" ? q.choices[q.correctChoiceIndex] : `${q.correctAnswer} ${q.unit}`}</span>
-                </div>
-              </div>
-
-              <!-- Solution Steps -->
-              <div class="bg-slate-900/80 p-4 rounded-lg border border-slate-800 text-xs space-y-2">
-                <div class="font-bold text-amber-400">\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:</div>
-                <ul id="exam-solution-steps-${idx}" class="list-disc list-inside space-y-1 text-slate-300">
-                  ${q.solutionSteps.map((s) => `<li>${s}</li>`).join("")}
-                </ul>
-              </div>
-            </div>
-          `).join("")}
+            `}
+          </div>
         </div>
-
-      </div>
-    `;
-      const btnRetake = this.container.querySelector("#btn-retake-exam");
-      if (btnRetake) {
-        btnRetake.addEventListener("click", () => {
-          this.examManager.state = EXAM_STATES.IDLE;
-          this.renderStartScreenView();
+      `;
+      }).join("");
+      this.renderMathExpressions();
+    }
+    /**
+     * Record answer for question index
+     */
+    recordAnswer(qIdx, val) {
+      this.examManager.recordAnswer(qIdx, val, qIdx);
+      if (this.examManager.questions[qIdx]?.type === "choice") {
+        const radios = document.querySelectorAll(`input[name="exam-q-${qIdx}"]`);
+        radios.forEach((r) => {
+          const label = r.closest("label");
+          if (label) {
+            if (r.checked) {
+              label.className = "exam-choice-label flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all bg-blue-50 border-blue-500 text-blue-900 font-semibold";
+            } else {
+              label.className = "exam-choice-label flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all bg-white border-slate-200 text-slate-700 hover:bg-slate-50";
+            }
+          }
         });
+      }
+    }
+    /**
+     * Confirm and submit exam
+     */
+    confirmSubmitExam() {
+      const unanswered = this.examManager.questions.filter((_, idx) => {
+        const a = this.examManager.userAnswers[idx];
+        return a === void 0 || a === "";
+      }).length;
+      let confirmMsg = "\u0E04\u0E38\u0E13\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E41\u0E25\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48?";
+      if (unanswered > 0) {
+        confirmMsg = `\u0E04\u0E38\u0E13\u0E22\u0E31\u0E07\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E2D\u0E1A\u0E2D\u0E35\u0E01 ${unanswered} \u0E02\u0E49\u0E2D!
+\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E41\u0E25\u0E30\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48?`;
+      }
+      if (confirm(confirmMsg)) {
+        this.examManager.submitExam(false);
+      }
+    }
+    /**
+     * Update timer display string
+     */
+    updateTimerDisplay(secondsLeft, timerStr) {
+      const timerDisplay = document.getElementById("exam-timer-display");
+      if (timerDisplay) {
+        timerDisplay.textContent = timerStr;
+        if (secondsLeft < 180) {
+          timerDisplay.className = "font-mono text-lg font-bold text-red-400 tracking-wider animate-pulse";
+        } else {
+          timerDisplay.className = "font-mono text-lg font-bold text-white tracking-wider";
+        }
+      }
+    }
+    /**
+     * Render results into #sec-exam-result
+     */
+    renderResults(res) {
+      if (!res) return;
+      TabNavigatorAdapter.showSection("exam-result");
+      this.updateHomeLastScore(res.totalScore);
+      const circle = document.getElementById("res-circle-progress");
+      const totalScoreEl = document.getElementById("lbl-res-total-score");
+      if (circle) {
+        const perimeter = 439.8;
+        const offset = perimeter - res.percentage / 100 * perimeter;
+        setTimeout(() => {
+          circle.style.strokeDashoffset = String(offset);
+        }, 100);
+      }
+      if (totalScoreEl) totalScoreEl.textContent = String(res.totalScore);
+      const nameEl = document.getElementById("lbl-res-student-name");
+      const metaEl = document.getElementById("lbl-res-student-meta");
+      const timeEl = document.getElementById("lbl-res-time-elapsed");
+      const dateEl = document.getElementById("lbl-res-finished-at");
+      if (nameEl) nameEl.textContent = res.fullName || "\u0E1C\u0E39\u0E49\u0E2A\u0E2D\u0E1A";
+      if (metaEl) metaEl.textContent = `${res.className || "\u0E21.6/1"} \u2022 \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 #${res.rollNumber}`;
+      if (timeEl) timeEl.textContent = res.formattedTimeTaken || "15 \u0E19\u0E32\u0E17\u0E35";
+      if (dateEl) dateEl.textContent = res.formattedSubmittedAt || (/* @__PURE__ */ new Date()).toLocaleString("th-TH");
+      const cheatCard = document.getElementById("exam-cheat-summary-card");
+      const tabSwitchesEl = document.getElementById("lbl-res-tab-switches");
+      const refreshesEl = document.getElementById("lbl-res-refreshes");
+      if (this.tabSwitchCount > 0 || this.refreshCount > 0) {
+        if (cheatCard) cheatCard.classList.remove("hidden");
+        if (tabSwitchesEl) tabSwitchesEl.textContent = `${this.tabSwitchCount} \u0E04\u0E23\u0E31\u0E49\u0E07`;
+        if (refreshesEl) refreshesEl.textContent = `${this.refreshCount} \u0E04\u0E23\u0E31\u0E49\u0E07`;
+      } else {
+        if (cheatCard) cheatCard.classList.add("hidden");
+      }
+      const feedbackBadge = document.getElementById("lbl-res-badge-feedback");
+      if (feedbackBadge) {
+        if (res.totalScore >= 8) {
+          feedbackBadge.className = "text-center p-4 rounded-xl mb-8 border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-semibold";
+          feedbackBadge.textContent = "\u{1F31F} \u0E1C\u0E25\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E22\u0E2D\u0E14\u0E40\u0E22\u0E35\u0E48\u0E22\u0E21! \u0E04\u0E38\u0E13\u0E40\u0E02\u0E49\u0E32\u0E43\u0E08\u0E2B\u0E25\u0E31\u0E01\u0E01\u0E32\u0E23\u0E04\u0E25\u0E37\u0E48\u0E19\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01\u0E44\u0E1F\u0E1F\u0E49\u0E32\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E41\u0E21\u0E48\u0E19\u0E22\u0E33\u0E21\u0E32\u0E01";
+        } else if (res.totalScore >= 6) {
+          feedbackBadge.className = "text-center p-4 rounded-xl mb-8 border border-blue-200 bg-blue-50 text-blue-800 text-sm font-semibold";
+          feedbackBadge.textContent = "\u{1F389} \u0E1C\u0E48\u0E32\u0E19\u0E40\u0E01\u0E13\u0E11\u0E4C\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E30\u0E40\u0E21\u0E34\u0E19! \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E17\u0E1A\u0E17\u0E27\u0E19\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E1C\u0E34\u0E14\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E21\u0E48\u0E19\u0E22\u0E33\u0E22\u0E34\u0E48\u0E07\u0E02\u0E36\u0E49\u0E19";
+        } else {
+          feedbackBadge.className = "text-center p-4 rounded-xl mb-8 border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold";
+          feedbackBadge.textContent = "\u26A0\uFE0F \u0E04\u0E30\u0E41\u0E19\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E40\u0E01\u0E13\u0E11\u0E4C 60% \u0E41\u0E19\u0E30\u0E19\u0E33\u0E43\u0E2B\u0E49\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E1A\u0E17\u0E27\u0E19\u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E19\u0E41\u0E25\u0E30\u0E1D\u0E36\u0E01\u0E17\u0E33\u0E42\u0E08\u0E17\u0E22\u0E4C\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07";
+        }
+      }
+      const tbody = document.getElementById("exam-result-tbody");
+      if (tbody) {
+        tbody.innerHTML = res.gradedQuestions.map(
+          (q, idx) => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-5 py-4 font-bold text-slate-800">\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 ${idx + 1}</td>
+          <td class="px-5 py-4 text-slate-600">${q.topic} - ${q.title}</td>
+          <td class="px-5 py-4 text-center font-mono text-slate-500">2.0</td>
+          <td class="px-5 py-4 text-center">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${q.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}">
+              ${q.scoreObtained.toFixed(1)}
+            </span>
+          </td>
+        </tr>
+      `
+        ).join("");
+      }
+      const solutionsContainer = document.getElementById("exam-solutions-container");
+      if (solutionsContainer) {
+        solutionsContainer.innerHTML = res.gradedQuestions.map(
+          (q, idx) => `
+        <div class="bg-white p-5 rounded-2xl border ${q.isCorrect ? "border-emerald-200" : "border-red-200"} space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${q.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}">
+              \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 ${idx + 1} \u2022 ${q.isCorrect ? "\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 (+2.0)" : "\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 (0.0)"}
+            </span>
+            <span class="text-xs text-slate-500 font-mono">${q.topic}</span>
+          </div>
+
+          <p class="text-sm font-medium text-slate-800 math-font">${q.problemText}</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-slate-500 block mb-0.5">\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13:</span>
+              <span class="font-bold text-sm ${q.isCorrect ? "text-emerald-600" : "text-red-600"}">
+                ${q.userAnswer ?? "-"} ${q.unit || ""}
+              </span>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-slate-500 block mb-0.5">\u0E40\u0E09\u0E25\u0E22\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07:</span>
+              <span class="font-bold text-sm text-emerald-600">
+                ${q.type === "choice" ? q.choices[q.correctChoiceIndex] : `${q.correctAnswer} ${q.unit || ""}`}
+              </span>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+            <div class="font-bold text-blue-600 flex items-center gap-1.5">
+              <i class="fa-solid fa-lightbulb"></i> \u0E27\u0E34\u0E18\u0E35\u0E17\u0E33\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:
+            </div>
+            <ol class="list-decimal pl-4 space-y-1 text-slate-700 math-font">
+              ${q.solutionSteps.map((s) => `<li>${s}</li>`).join("")}
+            </ol>
+          </div>
+        </div>
+      `
+        ).join("");
       }
       this.renderMathExpressions();
     }
     /**
-     * Render inline KaTeX math expressions \\(...\\) and $...$
+     * Toggle solution box
+     */
+    toggleExamSolutionBox() {
+      const box = document.getElementById("exam-solution-box");
+      const icon = document.getElementById("icon-toggle-sol");
+      const text = document.getElementById("lbl-toggle-solution-text");
+      if (!box) return;
+      if (box.classList.contains("hidden")) {
+        box.classList.remove("hidden");
+        if (icon) icon.className = "fa-solid fa-chevron-up";
+        if (text) text.textContent = "\u0E0B\u0E48\u0E2D\u0E19\u0E04\u0E33\u0E40\u0E09\u0E25\u0E22\u0E41\u0E25\u0E30\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33";
+      } else {
+        box.classList.add("hidden");
+        if (icon) icon.className = "fa-solid fa-chevron-down";
+        if (text) text.textContent = "\u0E41\u0E2A\u0E14\u0E07\u0E04\u0E33\u0E40\u0E09\u0E25\u0E22\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E41\u0E25\u0E30\u0E41\u0E2A\u0E14\u0E07\u0E27\u0E34\u0E18\u0E35\u0E17\u0E33";
+      }
+    }
+    /**
+     * Update home screen score badge
+     */
+    updateHomeLastScore(score) {
+      const el = document.getElementById("lbl-last-score");
+      if (el) {
+        el.textContent = `${score} / 10 \u0E04\u0E30\u0E41\u0E19\u0E19`;
+      }
+    }
+    /**
+     * Open Latest Result Modal from Home page
+     */
+    showLatestResultModal() {
+      const modal = document.getElementById("latest-result-modal");
+      const content = document.getElementById("modal-latest-result-content");
+      const result = LocalStorageAdapter.loadExamResult();
+      if (!result) {
+        alert("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E2A\u0E2D\u0E1A \u0E01\u0E23\u0E38\u0E13\u0E32\u0E17\u0E33\u0E41\u0E1A\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E30\u0E41\u0E19\u0E19\u0E01\u0E48\u0E2D\u0E19");
+        return;
+      }
+      if (content) {
+        content.innerHTML = `
+        <div class="text-center p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <div class="text-4xl font-extrabold text-blue-600 font-mono">${result.totalScore} / 10</div>
+          <div class="text-xs text-slate-500 mt-1">\u0E04\u0E30\u0E41\u0E19\u0E19\u0E23\u0E27\u0E21 (${result.percentage.toFixed(0)}%)</div>
+        </div>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-slate-100">
+            <span class="text-slate-500">\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E2D\u0E1A:</span>
+            <span class="font-bold text-slate-800">${result.fullName} (${result.className}) \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48 ${result.rollNumber}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-100">
+            <span class="text-slate-500">\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49:</span>
+            <span class="font-bold text-slate-800">${result.formattedTimeTaken}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-100">
+            <span class="text-slate-500">\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E1A:</span>
+            <span class="font-bold text-slate-800">${result.formattedSubmittedAt}</span>
+          </div>
+        </div>
+      `;
+      }
+      if (modal) modal.classList.remove("hidden");
+    }
+    /**
+     * Close Latest Result Modal
+     */
+    closeLatestResultModal() {
+      const modal = document.getElementById("latest-result-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+    /**
+     * Render KaTeX Math Expressions
      */
     renderMathExpressions() {
       if (typeof window.katex === "undefined") return;
-      const textNodes = this.container.querySelectorAll('[id^="exam-problem-text"], [id^="exam-solution-steps"] li, .glass-panel li, .glass-panel p');
-      textNodes.forEach((node) => {
+      const container = document.getElementById("sec-exam-live") || document.getElementById("sec-exam-result");
+      if (!container) return;
+      const targets = document.querySelectorAll(".exam-problem-content, .exam-choice-label span, #exam-solutions-container p, #exam-solutions-container li");
+      targets.forEach((node) => {
         let html = node.innerHTML;
         html = html.replace(/\\\((.*?)\\\)/g, (match, math) => {
           try {
@@ -3069,40 +2997,34 @@
         polarizationSim = new PolarizationSimulator(canvasPolarization);
         ControlPanelAdapter.bindPolarizationControls(polarizationSim);
       }
-      const quizContainer = document.getElementById("quiz-system-container");
-      let quizUI = null;
-      if (quizContainer) {
-        quizUI = new QuizUIAdapter(quizContainer);
-      }
-      const examContainer = document.getElementById("exam-system-container");
-      let examUI = null;
-      if (examContainer) {
-        examUI = new ExamUIAdapter(examContainer);
-      }
+      const quizUI = new QuizUIAdapter();
+      const examUI = new ExamUIAdapter();
       TabNavigatorAdapter.init({
         emWaveSim,
         spectrumSim,
         polarizationSim
       });
-      renderFormulaHeadings();
-      console.log("[Physics Portal] All modules and simulators initialized successfully.");
+      renderAllMathFormulas();
+      console.log("[Physics Portal] All modules and simulators initialized successfully with U-17 UI architecture.");
     } catch (err) {
       console.error("[Physics Portal Error] Failed to initialize portal modules:", err);
     }
   });
-  function renderFormulaHeadings() {
-    setTimeout(() => {
-      KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.VECTOR_FIELD, "katex-formula-18-1");
-      KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.PHOTON_ENERGY, "katex-formula-18-2");
-      KaTeXAdapter.render(KaTeXAdapter.TEMPLATES.MALUS_LAW, "katex-formula-18-3");
-      KaTeXAdapter.renderAllMath(document.body);
-    }, 100);
+  function renderAllMathFormulas() {
+    const tryRender = () => {
+      if (typeof window.katex !== "undefined") {
+        KaTeXAdapter.renderAllMath(document.body);
+      } else {
+        setTimeout(tryRender, 150);
+      }
+    };
+    setTimeout(tryRender, 100);
   }
   function verifyKaTeXLoaded() {
     if (typeof window.katex !== "undefined") {
       console.log("[KaTeX Adapter] Local KaTeX engine loaded successfully for offline formula rendering.");
     } else {
-      console.warn("[KaTeX Adapter] KaTeX not found in global window context.");
+      console.warn("[KaTeX Adapter] KaTeX not found in global window context. Retrying...");
     }
   }
   function setupErrorBoundary() {
