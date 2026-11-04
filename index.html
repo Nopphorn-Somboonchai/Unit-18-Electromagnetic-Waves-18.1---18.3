@@ -396,70 +396,114 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Animation Canvas (Left 7 Cols) -->
-            <div
-              class="lg:col-span-7 bg-slate-900 p-5 rounded-2xl flex flex-col justify-center items-center border border-slate-800 shadow-inner relative space-y-3">
-              <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                <span class="text-xs text-slate-300 font-bold flex items-center gap-1.5">
-                  <i class="fa-solid fa-eye text-cyan-400"></i> ภาพจำลองการสั่นของเวกเตอร์สนาม 3 มิติ
-                </span>
-                <span
-                  class="text-[10px] font-mono text-slate-400 bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800 self-start sm:self-auto">
-                  ระนาบ: <span class="text-rose-400 font-bold">● E (แกน Y)</span> | <span
-                    class="text-cyan-400 font-bold">● B (แกน Z)</span> | <span
-                    class="text-emerald-400 font-bold">▶ v (แกน X)</span>
+          <!-- Simulation 1 Unified Interactive Suite (Single-Screen Interaction for iPad & Mobile) -->
+          <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden space-y-0">
+            <!-- Canvas Header & Coordinates Info -->
+            <div class="p-4 sm:p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80">
+              <span class="text-xs sm:text-sm text-slate-200 font-bold flex items-center gap-2">
+                <i class="fa-solid fa-wave-square text-cyan-400"></i> ภาพจำลองการสั่นของเวกเตอร์สนาม 3 มิติ (\(\vec{E} \perp \vec{B} \perp \vec{v}\))
+              </span>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <span class="text-[10px] sm:text-[11px] font-mono text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800 flex items-center gap-2">
+                  <span class="text-rose-400 font-bold">● E (แกน Y)</span> | <span class="text-cyan-400 font-bold">● B (แกน Z)</span> | <span class="text-emerald-400 font-bold">▶ v (แกน X)</span>
                 </span>
               </div>
-              <canvas id="canvas-em-wave" width="800" height="420"
-                class="w-full h-auto bg-slate-950 border border-slate-800 rounded-xl shadow-inner"></canvas>
             </div>
 
-            <!-- Controller Box (Right 5 Cols) -->
-            <div
-              class="lg:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
-              <div class="space-y-4 text-xs">
-                <div>
-                  <div class="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1.5">
+            <!-- Canvas Viewport with Guaranteed Minimum Height (No Vertical Squishing) -->
+            <div class="w-full relative bg-slate-950 overflow-hidden">
+              <canvas id="canvas-em-wave"
+                class="w-full h-[300px] sm:h-[350px] md:h-[390px] block bg-slate-950"></canvas>
+            </div>
+
+            <!-- Integrated Control & Instant Feedback Toolbar (Single-Screen Interaction) -->
+            <div class="p-4 sm:p-5 bg-slate-900 border-t border-slate-800 space-y-4">
+              <!-- Row 1: Frequency Display & Slider -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label for="slider-em-freq" class="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-blue-400"></i>
                     <span>ความถี่คลื่น (\(f\)):</span>
-                    <span id="val-em-freq" class="text-blue-600 font-mono font-bold text-sm">100.00 MHz</span>
-                  </div>
-                  <input type="range" id="slider-em-freq" min="10" max="500" value="100" step="5"
-                    class="w-full h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-blue-600">
-                  <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
-                    <span>10 MHz</span>
-                    <span>250 MHz</span>
-                    <span>500 MHz</span>
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <span id="val-em-freq"
+                      class="text-blue-400 font-mono font-bold text-base sm:text-lg px-3 py-0.5 bg-blue-950/70 border border-blue-800/80 rounded-lg shadow-inner">
+                      100.00 MHz
+                    </span>
                   </div>
                 </div>
 
-                <!-- Live Calculations Dashboard -->
-                <div class="bg-slate-800 text-white p-3.5 rounded-xl border border-slate-700 shadow-inner">
-                  <span class="text-[10px] text-slate-400 block font-bold tracking-wider mb-2">
-                    ผลคำนวณตัวแปรทางฟิสิกส์แบบเรียลไทม์
-                  </span>
-                  <div class="space-y-2 text-xs font-mono">
-                    <div class="flex justify-between">
-                      <span class="text-slate-300 font-sans">ความยาวคลื่น (\(\lambda = c/f\)):</span>
-                      <span id="val-em-wavelength" class="text-emerald-400 font-bold text-sm">3.00 m</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-700/60 pt-1.5">
-                      <span class="text-slate-300 font-sans">อัตราเร็วในสุญญากาศ (\(c\)):</span>
-                      <span class="text-cyan-300 font-bold">\(3.00 \times 10^8 \text{ m/s}\)</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-700/60 pt-1.5">
-                      <span class="text-slate-300 font-sans">ทิศทางเวกเตอร์:</span>
-                      <span class="text-amber-300 font-bold">\(\vec{E} \perp \vec{B} \perp \vec{v}\)</span>
-                    </div>
-                  </div>
+                <div class="relative flex items-center">
+                  <input type="range" id="slider-em-freq" min="10" max="500" value="100" step="5"
+                    class="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 hover:accent-blue-400 transition" />
+                </div>
+
+                <div class="flex justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono px-0.5">
+                  <span>10 MHz (วิทยุ)</span>
+                  <span>100 MHz (FM)</span>
+                  <span>250 MHz</span>
+                  <span>500 MHz</span>
                 </div>
               </div>
 
-              <div class="flex gap-2">
-                <button id="btn-toggle-wave-anim"
-                  class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-pause"></i> <span>เล่น / หยุดแอนิเมชัน</span>
-                </button>
+              <!-- Row 2: Precision Steppers, Quick Presets & Play/Pause -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-800/80">
+                <!-- Precision Steppers & Presets -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
+                    ปรับความถี่:
+                  </span>
+                  <button type="button" onclick="adjustEMFrequency(-10)"
+                    class="min-h-[40px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-blue-600/30 text-slate-200 hover:text-white text-xs font-mono font-bold rounded-lg border border-slate-700 transition cursor-pointer">
+                    -10 MHz
+                  </button>
+                  <button type="button" onclick="adjustEMFrequency(+10)"
+                    class="min-h-[40px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-blue-600/30 text-slate-200 hover:text-white text-xs font-mono font-bold rounded-lg border border-slate-700 transition cursor-pointer">
+                    +10 MHz
+                  </button>
+                  <button type="button" onclick="setEMFrequencyPreset(10)"
+                    class="min-h-[40px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition cursor-pointer">
+                    10 MHz
+                  </button>
+                  <button type="button" onclick="setEMFrequencyPreset(100)"
+                    class="min-h-[40px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition cursor-pointer">
+                    100 MHz
+                  </button>
+                  <button type="button" onclick="setEMFrequencyPreset(300)"
+                    class="min-h-[40px] px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition cursor-pointer">
+                    300 MHz
+                  </button>
+                </div>
+
+                <!-- Play / Pause Animation Button -->
+                <div>
+                  <button id="btn-toggle-wave-anim"
+                    class="min-h-[40px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto">
+                    <i class="fa-solid fa-pause"></i> <span>เล่น / หยุดแอนิเมชัน</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Row 3: Instant Live Calculations Bar -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800/80">
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between sm:flex-col sm:items-start gap-1">
+                  <span class="text-[11px] text-slate-400">ความยาวคลื่น (\(\lambda = c/f\)):</span>
+                  <span id="val-em-wavelength" class="text-xs sm:text-sm font-bold font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/60">
+                    3.00 m
+                  </span>
+                </div>
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between sm:flex-col sm:items-start gap-1">
+                  <span class="text-[11px] text-slate-400">อัตราเร็วในสุญญากาศ (\(c\)):</span>
+                  <span class="text-xs sm:text-sm font-bold font-mono text-cyan-300 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/60">
+                    \(3.00 \times 10^8 \text{ m/s}\)
+                  </span>
+                </div>
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between sm:flex-col sm:items-start gap-1">
+                  <span class="text-[11px] text-slate-400">ความสัมพันธ์เชิงเวกเตอร์:</span>
+                  <span class="text-xs sm:text-sm font-bold text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/60">
+                    \(\vec{E} \perp \vec{B} \perp \vec{v}\)
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -498,47 +542,90 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Canvas Spectrum Plotter (Left 7 Cols) -->
-            <div
-              class="lg:col-span-7 bg-slate-900 p-5 rounded-2xl flex flex-col justify-center items-center border border-slate-800 shadow-inner relative space-y-3">
-              <div class="w-full flex items-center justify-between px-1">
-                <span class="text-xs text-slate-300 font-bold flex items-center gap-1.5">
-                  <i class="fa-solid fa-chart-column text-cyan-400"></i> แถบสเปกตรัม 7 ช่วงความถี่ (คลิกเพื่อเลือกช่วง)
+          <!-- Simulation 2 Unified Interactive Suite (Single-Screen Interaction for iPad & Mobile) -->
+          <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden space-y-0">
+            <!-- Canvas Header -->
+            <div class="p-4 sm:p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80">
+              <span class="text-xs sm:text-sm text-slate-200 font-bold flex items-center gap-2">
+                <i class="fa-solid fa-chart-column text-cyan-400"></i> แถบสเปกตรัมคลื่นแม่เหล็กไฟฟ้า 7 ช่วงความถี่ (สเกลลอการิทึม)
+              </span>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <span class="text-[10px] sm:text-[11px] font-mono text-cyan-400/90 bg-cyan-950/60 border border-cyan-800/60 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                  <i class="fa-solid fa-hand-pointer"></i> แตะเลือกช่วงบนแถบสีหรือปุ่มด้านล่าง
                 </span>
               </div>
-              <canvas id="canvas-spectrum" width="800" height="240"
-                class="w-full h-auto bg-slate-950 border border-slate-800 rounded-xl shadow-inner cursor-pointer"></canvas>
             </div>
 
-            <!-- Controller & Detail Box (Right 5 Cols) -->
-            <div
-              class="lg:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
-              <div class="space-y-3">
-                <div class="flex items-center gap-2.5 pb-2 border-b border-slate-200">
+            <!-- Canvas Viewport with Guaranteed Minimum Height (No Vertical Squishing) -->
+            <div class="w-full relative bg-slate-950 overflow-hidden">
+              <canvas id="canvas-spectrum"
+                class="w-full h-[260px] sm:h-[290px] md:h-[310px] block bg-slate-950 cursor-pointer"></canvas>
+            </div>
+
+            <!-- Integrated Control & Detail Toolbar (Single-Screen Interaction) -->
+            <div class="p-4 sm:p-5 bg-slate-900 border-t border-slate-800 space-y-4">
+              <!-- Quick 7-Band Touch Selector Buttons -->
+              <div>
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  เลือกช่วงคลื่นแม่เหล็กไฟฟ้า (7 แถบสเปกตรัม):
+                </span>
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
+                  <button type="button" onclick="selectSpectrumBandById('radio')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center">
+                    วิทยุ
+                  </button>
+                  <button type="button" onclick="selectSpectrumBandById('microwave')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center">
+                    ไมโคร
+                  </button>
+                  <button type="button" onclick="selectSpectrumBandById('infrared')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center">
+                    อินฟรา
+                  </button>
+                  <button type="button" onclick="selectSpectrumBandById('visible')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center">
+                    แสง
+                  </button>
+                  <button type="button" onclick="selectSpectrumBandById('ultraviolet')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-violet-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center">
+                    UV
+                  </button>
+                  <button type="button" onclick="selectSpectrumBandById('xray')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center">
+                    X-ray
+                  </button>
+                  <button type="button" onclick="selectSpectrumBandById('gamma')"
+                    class="min-h-[40px] px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-400 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer text-center col-span-2 sm:col-span-1">
+                    แกมมา
+                  </button>
+                </div>
+              </div>
+
+              <!-- Active Band Detail Panel -->
+              <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div class="flex items-center gap-2.5 pb-2 border-b border-slate-800">
                   <div id="spectrum-color-badge" class="w-4 h-4 rounded-full bg-blue-500 shadow-sm shrink-0"></div>
-                  <h4 id="spectrum-band-name" class="text-base font-bold text-slate-800">คลื่นวิทยุ (Radio Waves)</h4>
+                  <h4 id="spectrum-band-name" class="text-sm sm:text-base font-bold text-slate-100">คลื่นวิทยุ (Radio Waves)</h4>
                 </div>
 
-                <!-- Detail Panel -->
-                <div class="bg-slate-800 text-white p-3.5 rounded-xl border border-slate-700 shadow-inner space-y-2 text-xs font-mono">
-                  <div class="flex justify-between">
-                    <span class="text-slate-300 font-sans">ช่วงความถี่ (\(f\)):</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+                  <div class="flex justify-between sm:flex-col sm:items-start gap-1">
+                    <span class="text-slate-400 font-sans">ช่วงความถี่ (\(f\)):</span>
                     <span id="spectrum-freq-range" class="text-cyan-300 font-bold">3 kHz - 3 GHz</span>
                   </div>
-                  <div class="flex justify-between border-t border-slate-700/60 pt-1.5">
-                    <span class="text-slate-300 font-sans">ช่วงความยาวคลื่น (\(\lambda\)):</span>
+                  <div class="flex justify-between sm:flex-col sm:items-start gap-1">
+                    <span class="text-slate-400 font-sans">ช่วงความยาวคลื่น (\(\lambda\)):</span>
                     <span id="spectrum-wave-range" class="text-emerald-400 font-bold">0.1 m - 100 km</span>
                   </div>
-                  <div class="flex justify-between border-t border-slate-700/60 pt-1.5">
-                    <span class="text-slate-300 font-sans">พลังงานโฟตอน (\(E\)):</span>
+                  <div class="flex justify-between sm:flex-col sm:items-start gap-1">
+                    <span class="text-slate-400 font-sans">พลังงานโฟตอน (\(E\)):</span>
                     <span id="spectrum-energy-val" class="text-amber-300 font-bold">\(1.24 \times 10^{-11} \text{ eV}\)</span>
                   </div>
                 </div>
 
-                <div class="pt-1">
-                  <span class="text-xs font-bold text-slate-700 block mb-1">การประยุกต์ใช้งานในชีวิตประจำวัน:</span>
-                  <p id="spectrum-app-desc" class="text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-200 leading-relaxed">
+                <div class="pt-2 border-t border-slate-800/80">
+                  <span class="text-[11px] font-bold text-slate-300 block mb-1">การประยุกต์ใช้งานในชีวิตประจำวัน:</span>
+                  <p id="spectrum-app-desc" class="text-xs text-slate-400 leading-relaxed">
                     การสื่อสารวิทยุระบบ AM/FM, ระบบโทรทัศน์, โทรศัพท์เคลื่อนที่ และการสื่อสารดาวเทียม
                   </p>
                 </div>

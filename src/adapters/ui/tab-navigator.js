@@ -142,7 +142,18 @@ export class TabNavigatorAdapter {
     const { emWaveSim, spectrumSim, polarizationSim } = this.simulators;
 
     if (tabId === '18-1-wave') {
-      if (emWaveSim) emWaveSim.start();
+      if (emWaveSim) {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            if (emWaveSim.plotter && typeof emWaveSim.plotter.resize === 'function') {
+              emWaveSim.plotter.resize();
+            }
+            emWaveSim.start();
+          });
+        } else {
+          emWaveSim.start();
+        }
+      }
     } else {
       if (emWaveSim) emWaveSim.pause();
     }

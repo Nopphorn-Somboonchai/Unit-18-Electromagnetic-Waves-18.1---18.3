@@ -1,11 +1,13 @@
 /**
  * @file spectrum-simulator.js
  * @description Application Service Orchestrator for Simulator 18.2 (7 EM Spectrum Bands).
+ * Supports direct band selection via quick touch buttons and responsive Canvas interaction.
  */
 
 import { SpectrumPlotter } from '../adapters/canvas/spectrum-plotter.js';
 import { getSpectrumInfo } from '../physics/spectrum-solver.js';
 import { APP_CONFIG } from '../shared/config.js';
+import { SPECTRUM_BANDS } from '../shared/constants.js';
 
 export class SpectrumSimulator {
   /**
@@ -17,7 +19,12 @@ export class SpectrumSimulator {
 
     this.onInfoChangeCallback = null;
 
-    // Attach click listener to canvas for direct band selection
+    // Trigger re-render on canvas resize
+    this.plotter.onResize = () => {
+      this.render();
+    };
+
+    // Attach click and touch listener to canvas for direct band selection
     this._attachCanvasClickListener();
 
     // Initial render
@@ -40,13 +47,26 @@ export class SpectrumSimulator {
   }
 
   /**
-   * Handle user click on Canvas spectrum bar to select frequency
+   * Select a spectrum band by its ID and jump to its geometric center frequency
+   * @param {string} bandId - 'radio', 'microwave', 'infrared', 'visible', 'ultraviolet', 'xray', 'gamma'
+   */
+  selectBandById(bandId) {
+    const band = SPECTRUM_BANDS.find((b) => b.id === bandId);
+    if (band) {
+      // Geometric center frequency of the band
+      const centerFreq = Math.sqrt(band.frequencyMin * band.frequencyMax);
+      this.updateFrequency(centerFreq);
+    }
+  }
+
+  /**
+   * Handle user click and touch on Canvas spectrum bar to select frequency
    */
   _attachCanvasClickListener() {
-    this.plotter.canvas.addEventListener('click', (evt) => {
+    const handleSelect = (evt) => {
       const rect = this.plotter.canvas.getBoundingClientRect();
       const clickX = evt.clientX - rect.left;
-      const paddingX = 40;
+      const paddingX = Math.max(16, this.plotter.width * 0.035);
       const barWidth = this.plotter.width - paddingX * 2;
 
       if (clickX >= paddingX && clickX <= paddingX + barWidth) {
@@ -58,7 +78,10 @@ export class SpectrumSimulator {
 
         this.updateFrequency(targetFreq);
       }
-    });
+    };
+
+    this.plotter.canvas.addEventListener('click', handleSelect);
+    this.plotter.canvas.addEventListener('pointerdown', handleSelect);
   }
 
   /**

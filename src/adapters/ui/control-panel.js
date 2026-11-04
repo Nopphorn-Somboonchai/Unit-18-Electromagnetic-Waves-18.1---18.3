@@ -29,6 +29,20 @@ export class ControlPanelAdapter {
       simulator.onUpdateCallback = ({ wavelength }) => {
         valWavelength.textContent = `${wavelength.toFixed(2)} m`;
       };
+
+      if (typeof window !== 'undefined') {
+        window.adjustEMFrequency = (delta) => {
+          let current = parseFloat(sliderFreq.value) || 100;
+          let target = Math.max(10, Math.min(500, current + delta));
+          sliderFreq.value = target;
+          sliderFreq.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+
+        window.setEMFrequencyPreset = (freq) => {
+          sliderFreq.value = Math.max(10, Math.min(500, freq));
+          sliderFreq.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+      }
     }
 
     if (btnToggleAnim) {
@@ -64,6 +78,14 @@ export class ControlPanelAdapter {
       if (energyVal) energyVal.textContent = `${energyEv.toExponential(2)} eV`;
       if (appDesc) appDesc.textContent = band.applications;
     };
+
+    if (typeof window !== 'undefined') {
+      window.selectSpectrumBandById = (bandId) => {
+        if (typeof simulator.selectBandById === 'function') {
+          simulator.selectBandById(bandId);
+        }
+      };
+    }
   }
 
   /**

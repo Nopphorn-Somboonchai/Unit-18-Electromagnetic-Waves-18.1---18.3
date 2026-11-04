@@ -2,6 +2,7 @@
  * @file spectrum-plotter.js
  * @description Canvas Plotter Adapter for 7 EM Spectrum Bands (Simulator 18.2).
  * Renders continuous multi-spectral bands, logarithmic frequency scale, and interactive cursor.
+ * Fully responsive for Mobile, iPad, and Desktop viewports with zero text collision.
  */
 
 import { CanvasRenderer } from './canvas-renderer.js';
@@ -19,18 +20,28 @@ export class SpectrumPlotter extends CanvasRenderer {
 
     this.clear('#090D16');
 
-    const paddingX = 40;
-    const barY = 60;
-    const barHeight = 60;
-    const barWidth = this.width - paddingX * 2;
+    const width = this.width;
+    const height = this.height;
+    const isCompact = width < 768;
+    const isUltraCompact = width < 480;
+
+    const paddingX = Math.max(16, width * 0.035);
+    const barWidth = width - paddingX * 2;
 
     // Logarithmic frequency bounds: 3 kHz (3e3) to 1e22 Hz
     const logMin = Math.log10(3e3);   // ~3.47
     const logMax = Math.log10(1e22);  // 22.0
 
+    // Vertical Layer Allocation (guaranteed full visibility)
+    const barY = isCompact ? 68 : 78;
+    const barHeight = isCompact ? 52 : 62;
+
     // 1. Draw Spectrum Color Bar
     const numBands = SPECTRUM_BANDS.length;
     const bandWidth = barWidth / numBands;
+
+    // Short names for compact viewports to prevent text overlap
+    const shortNames = ['วิทยุ', 'ไมโคร', 'IR', 'แสง', 'UV', 'X-ray', 'แกมมา'];
 
     for (let i = 0; i < numBands; i++) {
       const band = SPECTRUM_BANDS[i];
@@ -52,27 +63,30 @@ export class SpectrumPlotter extends CanvasRenderer {
         this.ctx.strokeRect(bx - 1, barY - 2, bandWidth + 2, barHeight + 4);
       }
 
-      // Draw band title on top
-      this.drawLabel(band.nameThai, bx + bandWidth / 2, barY - 15, {
-        font: isSelected ? 'bold 12px Prompt, sans-serif' : '11px Prompt, sans-serif',
+      // Draw band title on top (using short compact name on small screens)
+      const bandTitle = isCompact ? shortNames[i] : band.nameThai;
+      this.drawLabel(bandTitle, bx + bandWidth / 2, barY - (isCompact ? 12 : 16), {
+        font: isSelected
+          ? (isCompact ? 'bold 11px Prompt, sans-serif' : 'bold 12px Prompt, sans-serif')
+          : (isCompact ? '10px Prompt, sans-serif' : '11px Prompt, sans-serif'),
         color: isSelected ? '#FFFFFF' : '#94A3B8'
       });
     }
 
-    // 2. Draw Logarithmic Frequency Axis Markers
-    const axisY = barY + barHeight + 25;
+    // 2. Draw Logarithmic Frequency Axis Markers (strictly within visible canvas)
+    const axisY = barY + barHeight + (isCompact ? 22 : 28);
     this.drawLine(paddingX, axisY, paddingX + barWidth, axisY, '#64748B', 1.5);
 
-    // Draw key frequency tick marks (10^3, 10^6, 10^9, 10^12, 10^15, 10^18, 10^21)
-    const logTicks = [3, 6, 9, 12, 15, 18, 21];
+    // On compact screens, decimate ticks so they never overlap horizontally
+    const logTicks = isCompact ? [3, 9, 15, 21] : [3, 6, 9, 12, 15, 18, 21];
     logTicks.forEach((exp) => {
       const frac = (exp - logMin) / (logMax - logMin);
       const tx = paddingX + frac * barWidth;
 
       this.drawLine(tx, axisY - 5, tx, axisY + 5, '#94A3B8', 1);
-      this.drawLabel(`10^${exp} Hz`, tx, axisY + 18, {
-        font: '10px JetBrains Mono, monospace',
-        color: '#64748B'
+      this.drawLabel(`10^${exp} Hz`, tx, axisY + (isCompact ? 15 : 18), {
+        font: isCompact ? '9px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace',
+        color: '#94A3B8'
       });
     });
 
@@ -85,24 +99,33 @@ export class SpectrumPlotter extends CanvasRenderer {
     this.ctx.save();
     this.ctx.shadowColor = selectedBand ? selectedBand.color : '#06B6D4';
     this.ctx.shadowBlur = 12;
-    this.drawLine(cursorX, barY - 8, cursorX, barY + barHeight + 8, '#FFFFFF', 3);
+    this.drawLine(cursorX, barY - 6, cursorX, barY + barHeight + 6, '#FFFFFF', 3);
     this.ctx.restore();
 
     // Cursor indicator handle (Triangle)
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.beginPath();
-    this.ctx.moveTo(cursorX, barY - 12);
-    this.ctx.lineTo(cursorX - 7, barY - 22);
-    this.ctx.lineTo(cursorX + 7, barY - 22);
+    this.ctx.moveTo(cursorX, barY - 6);
+    this.ctx.lineTo(cursorX - 6, barY - 16);
+    this.ctx.lineTo(cursorX + 6, barY - 16);
     this.ctx.closePath();
     this.ctx.fill();
 
-    // Selected frequency text above cursor
+    // 4. Prominent Active Band Banner at the top (Clamped inside bounds)
     const freqFormatted = this.formatFreqText(frequency);
-    this.drawLabel(freqFormatted, cursorX, barY - 32, {
-      font: 'bold 12px JetBrains Mono, monospace',
-      color: '#06B6D4',
-      bgColor: 'rgba(15, 23, 42, 0.9)',
+    const bandFullName = selectedBand ? selectedBand.nameThai : '';
+    const bannerText = isCompact
+      ? `${bandFullName}: ${freqFormatted}`
+      : `${bandFullName} (${freqFormatted})`;
+
+    const bannerMinX = paddingX + 80;
+    const bannerMaxX = paddingX + barWidth - 80;
+    const bannerX = Math.max(bannerMinX, Math.min(bannerMaxX, cursorX));
+
+    this.drawLabel(bannerText, bannerX, isCompact ? 20 : 26, {
+      font: isCompact ? 'bold 11px JetBrains Mono, monospace' : 'bold 13px JetBrains Mono, monospace',
+      color: selectedBand ? selectedBand.color : '#06B6D4',
+      bgColor: 'rgba(15, 23, 42, 0.95)',
       padding: 6
     });
   }
