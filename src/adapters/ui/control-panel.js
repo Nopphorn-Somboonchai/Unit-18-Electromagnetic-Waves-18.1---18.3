@@ -83,6 +83,34 @@ export class ControlPanelAdapter {
         simulator.setAnalyzerAngle(angle);
       });
 
+      // Synchronize slider and display when angle is rotated directly on Canvas
+      simulator.onAngleChangeCallback = (angle) => {
+        if (sliderAngle && parseInt(sliderAngle.value, 10) !== angle) {
+          sliderAngle.value = angle;
+        }
+        if (valAngle) {
+          valAngle.textContent = `${angle}°`;
+        }
+      };
+
+      // Register global stepper and preset helpers for touch controls
+      if (typeof window !== 'undefined') {
+        window.adjustAnalyzerAngle = (delta) => {
+          let current = parseInt(sliderAngle.value, 10) || 0;
+          let target = (current + delta) % 360;
+          if (target < 0) target += 360;
+          sliderAngle.value = target;
+          sliderAngle.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+
+        window.setAnalyzerAnglePreset = (angle) => {
+          let target = parseInt(angle, 10) % 360;
+          if (target < 0) target += 360;
+          sliderAngle.value = target;
+          sliderAngle.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+      }
+
       simulator.onIntensityChangeCallback = ({ analyzerAngle, intensity2, isCrossed }) => {
         const frac = (intensity2 / 100).toFixed(2);
         valIntensity.innerHTML = `${intensity2.toFixed(1)}% (${KaTeXAdapter.renderToString(`${frac} I_0`)})`;

@@ -34,19 +34,21 @@ export class CanvasRenderer {
     }
 
     // Bind ResizeObserver for robust layout changes (tab show/hide, orientation change)
-    if (typeof ResizeObserver !== 'undefined' && this.canvas.parentElement) {
+    if (typeof ResizeObserver !== 'undefined') {
       this._resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
-          const cr = entry.contentRect;
-          if (cr.width > 0 && (Math.abs(cr.width - this.width) > 2 || Math.abs(cr.height - this.height) > 2)) {
-            this.resize();
-            if (typeof this.onResize === 'function') {
-              this.onResize();
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            if (Math.abs(width - this.width) > 1 || Math.abs(height - this.height) > 1) {
+              this.resize();
+              if (typeof this.onResize === 'function') {
+                this.onResize();
+              }
             }
           }
         }
       });
-      this._resizeObserver.observe(this.canvas.parentElement);
+      this._resizeObserver.observe(this.canvas);
     }
   }
 
@@ -55,16 +57,22 @@ export class CanvasRenderer {
    */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width || this.canvas.width || 800;
-    const height = rect.height || this.canvas.height || 400;
+    const width = Math.round(rect.width) || this.canvas.clientWidth || 800;
+    const height = Math.round(rect.height) || this.canvas.clientHeight || 360;
 
     this.width = width;
     this.height = height;
 
-    this.canvas.width = Math.floor(width * this.dpr);
-    this.canvas.height = Math.floor(height * this.dpr);
+    const targetWidth = Math.floor(width * this.dpr);
+    const targetHeight = Math.floor(height * this.dpr);
 
-    this.ctx.scale(this.dpr, this.dpr);
+    if (this.canvas.width !== targetWidth || this.canvas.height !== targetHeight) {
+      this.canvas.width = targetWidth;
+      this.canvas.height = targetHeight;
+    }
+
+    // Set high-DPI transform idempotently
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
   }
 
   /**
