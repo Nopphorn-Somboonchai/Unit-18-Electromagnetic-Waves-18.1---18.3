@@ -20,6 +20,11 @@ export class PolarizationSimulator {
 
     this.onIntensityChangeCallback = null;
 
+    // Trigger re-render on canvas resize / orientation change
+    this.plotter.onResize = () => {
+      this.render();
+    };
+
     // Initial update & render
     this.setAnalyzerAngle(this.analyzerAngle);
   }
@@ -51,6 +56,14 @@ export class PolarizationSimulator {
       });
     }
 
+    this.render();
+  }
+
+  /**
+   * Recalculate dimensions and re-render canvas
+   */
+  resizeAndRender() {
+    this.plotter.resize();
     this.render();
   }
 

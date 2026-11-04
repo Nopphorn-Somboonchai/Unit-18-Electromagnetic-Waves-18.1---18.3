@@ -148,11 +148,34 @@ export class TabNavigatorAdapter {
     }
 
     if (tabId === '18-2-spectrum') {
-      if (spectrumSim) spectrumSim.render();
+      if (spectrumSim) {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            if (spectrumSim.plotter && typeof spectrumSim.plotter.resize === 'function') {
+              spectrumSim.plotter.resize();
+            }
+            spectrumSim.render();
+          });
+        } else {
+          spectrumSim.render();
+        }
+      }
     }
 
     if (tabId === '18-3-polarization') {
-      if (polarizationSim) polarizationSim.render();
+      if (polarizationSim) {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            if (typeof polarizationSim.resizeAndRender === 'function') {
+              polarizationSim.resizeAndRender();
+            } else {
+              polarizationSim.render();
+            }
+          });
+        } else {
+          polarizationSim.render();
+        }
+      }
     }
   }
 

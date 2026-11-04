@@ -87,10 +87,24 @@ export class ControlPanelAdapter {
         const frac = (intensity2 / 100).toFixed(2);
         valIntensity.innerHTML = `${intensity2.toFixed(1)}% (${KaTeXAdapter.renderToString(`${frac} I_0`)})`;
 
-        if (isCrossed) {
-          valIntensity.className = 'text-sm font-bold font-mono text-red-400 bg-red-950/40 px-3 py-1.5 rounded-md border border-red-800';
+        if (isCrossed || intensity2 <= 0.05) {
+          valIntensity.className = 'text-sm font-bold font-mono text-rose-400 bg-rose-950/40 px-3 py-1.5 rounded-md border border-rose-800';
         } else {
-          valIntensity.className = 'text-sm font-bold font-mono text-amber-400 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700';
+          valIntensity.className = 'text-sm font-bold font-mono text-amber-400 bg-amber-950/40 px-3 py-1.5 rounded-md border border-amber-800/80';
+        }
+
+        const lblStatus = document.getElementById('lbl-polarization-status');
+        if (lblStatus) {
+          if (isCrossed || intensity2 <= 0.05) {
+            lblStatus.textContent = '🔒 แสงถูกกั้นสมบูรณ์ (มืดสนิท)';
+            lblStatus.className = 'text-rose-400 font-bold bg-rose-950/40 px-2.5 py-1 rounded border border-rose-800/80';
+          } else if (Math.abs(intensity2 - 50.0) < 0.1) {
+            lblStatus.textContent = '✨ แสงโพลาไรส์เชิงเส้น (สว่างสุด)';
+            lblStatus.className = 'text-amber-400 font-bold bg-amber-950/40 px-2.5 py-1 rounded border border-amber-800/80';
+          } else {
+            lblStatus.textContent = 'แสงโพลาไรส์เชิงเส้น';
+            lblStatus.className = 'text-emerald-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700';
+          }
         }
       };
     }

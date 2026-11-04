@@ -581,31 +581,39 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Canvas Polaroid Simulation (Left 7 Cols) -->
+          <!-- Simulation 3 Expanded Canvas Container (Full Width for iPad & Mobile) -->
+          <div class="space-y-5">
             <div
-              class="lg:col-span-7 bg-slate-900 p-5 rounded-2xl flex flex-col justify-center items-center border border-slate-800 shadow-inner relative space-y-3">
-              <div class="w-full flex items-center justify-between px-1">
-                <span class="text-xs text-slate-300 font-bold flex items-center gap-1.5">
+              class="w-full bg-slate-900 p-4 sm:p-5 rounded-2xl flex flex-col justify-center items-center border border-slate-800 shadow-inner relative space-y-3">
+              <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                <span class="text-xs sm:text-sm text-slate-200 font-bold flex items-center gap-2">
                   <i class="fa-solid fa-sun text-amber-400"></i> ลำแสงผ่านแผ่นโพลารอยด์ P1 (แนวตั้ง) และ P2 (หมุนมุมได้)
                 </span>
+                <span
+                  class="text-[11px] font-mono text-slate-400 bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800 self-start sm:self-auto">
+                  ลำแสง: <span class="text-sky-400 font-bold">P1 (0°)</span> → <span class="text-amber-400 font-bold">P2 (θ)</span>
+                </span>
               </div>
-              <canvas id="canvas-polarization" width="800" height="350"
-                class="w-full h-auto bg-slate-950 border border-slate-800 rounded-xl shadow-inner"></canvas>
+              <div class="w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                <canvas id="canvas-polarization" width="900" height="380"
+                  class="w-full h-auto block bg-slate-950"></canvas>
+              </div>
             </div>
 
-            <!-- Controller Box (Right 5 Cols) -->
-            <div
-              class="lg:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
-              <div class="space-y-4 text-xs">
+            <!-- Controller & Live Calculations Dashboard (2-Column Responsive Layout Below Canvas) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <!-- Left Card: Analyzer Angle Controls -->
+              <div class="bg-slate-50 p-5 sm:p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4 shadow-sm">
                 <div>
-                  <div class="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1.5">
-                    <span>มุมแผ่นวิเคราะห์ Analyzer (\(\theta\)):</span>
-                    <span id="val-analyzer-angle" class="text-amber-600 font-mono font-bold text-sm">45°</span>
+                  <div class="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+                    <span class="flex items-center gap-1.5">
+                      <i class="fa-solid fa-rotate text-amber-500"></i> มุมแผ่นวิเคราะห์ Analyzer (\(\theta\)):
+                    </span>
+                    <span id="val-analyzer-angle" class="text-amber-600 font-mono font-bold text-base px-2.5 py-0.5 bg-amber-50 border border-amber-200 rounded-md">45°</span>
                   </div>
                   <input type="range" id="slider-analyzer-angle" min="0" max="360" value="45" step="1"
-                    class="w-full h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-amber-600">
-                  <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600">
+                  <div class="flex justify-between text-[11px] text-slate-500 mt-1.5 font-mono">
                     <span>0° (ขนาน)</span>
                     <span>90° (ตั้งฉาก)</span>
                     <span>180°</span>
@@ -614,37 +622,64 @@
                   </div>
                 </div>
 
-                <!-- Live Calculations Dashboard -->
-                <div class="bg-slate-800 text-white p-3.5 rounded-xl border border-slate-700 shadow-inner">
-                  <span class="text-[10px] text-slate-400 block font-bold tracking-wider mb-2">
-                    ผลคำนวณความเข้มแสงสัมพัทธ์
+                <!-- Quick Presets -->
+                <div>
+                  <span class="text-[11px] font-bold text-slate-500 block mb-2 uppercase tracking-wider">
+                    มุมสำคัญที่น่าสนใจ (Quick Presets):
                   </span>
-                  <div class="space-y-2 text-xs font-mono">
-                    <div class="flex justify-between">
-                      <span class="text-slate-300 font-sans">ความเข้มแสงผ่าน P1 (\(I_1\)):</span>
-                      <span class="text-slate-200 font-bold">50.0% (\(0.50 I_0\))</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-700/60 pt-1.5">
-                      <span class="text-slate-300 font-sans">ความเข้มแสงผ่าน P2 (\(I_2\)):</span>
-                      <span id="val-transmitted-intensity" class="text-amber-400 font-bold text-sm">25.0% (\(0.25 I_0\))</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-700/60 pt-1.5">
-                      <span class="text-slate-300 font-sans">สถานะแสงที่ผ่านออก:</span>
-                      <span id="lbl-polarization-status" class="text-emerald-400 font-bold">แสงโพลาไรส์เชิงเส้น</span>
-                    </div>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button onclick="document.getElementById('slider-analyzer-angle').value = 0; document.getElementById('slider-analyzer-angle').dispatchEvent(new Event('input'));"
+                      class="py-2 px-2 bg-white hover:bg-amber-50 hover:border-amber-400 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg transition shadow-xs text-center cursor-pointer">
+                      0° (สว่างสุด)
+                    </button>
+                    <button onclick="document.getElementById('slider-analyzer-angle').value = 45; document.getElementById('slider-analyzer-angle').dispatchEvent(new Event('input'));"
+                      class="py-2 px-2 bg-white hover:bg-amber-50 hover:border-amber-400 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg transition shadow-xs text-center cursor-pointer">
+                      45° (ครึ่งหนึ่ง)
+                    </button>
+                    <button onclick="document.getElementById('slider-analyzer-angle').value = 90; document.getElementById('slider-analyzer-angle').dispatchEvent(new Event('input'));"
+                      class="py-2 px-2 bg-white hover:bg-rose-50 hover:border-rose-400 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg transition shadow-xs text-center cursor-pointer">
+                      90° (มืดสนิท)
+                    </button>
+                    <button onclick="document.getElementById('slider-analyzer-angle').value = 180; document.getElementById('slider-analyzer-angle').dispatchEvent(new Event('input'));"
+                      class="py-2 px-2 bg-white hover:bg-amber-50 hover:border-amber-400 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg transition shadow-xs text-center cursor-pointer">
+                      180° (สว่างสุด)
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <div class="flex gap-2">
-                <button onclick="document.getElementById('slider-analyzer-angle').value = 0; document.getElementById('slider-analyzer-angle').dispatchEvent(new Event('input'));"
-                  class="flex-1 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer">
-                  มุม 0° (สว่างสุด)
-                </button>
-                <button onclick="document.getElementById('slider-analyzer-angle').value = 90; document.getElementById('slider-analyzer-angle').dispatchEvent(new Event('input'));"
-                  class="flex-1 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer">
-                  มุม 90° (มืดสนิท)
-                </button>
+              <!-- Right Card: Live Calculations Dashboard -->
+              <div class="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between space-y-4">
+                <div>
+                  <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                    <span class="text-xs sm:text-sm text-slate-300 font-bold flex items-center gap-1.5">
+                      <i class="fa-solid fa-chart-line text-amber-400"></i> ผลคำนวณความเข้มแสงสัมพัทธ์ (Malus's Law)
+                    </span>
+                    <span class="text-[10px] text-amber-400/90 font-mono bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded">
+                      เรียลไทม์
+                    </span>
+                  </div>
+
+                  <div class="space-y-3 text-xs sm:text-sm font-mono mt-3">
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-300 font-sans">ความเข้มแสงผ่าน P1 (\(I_1\)):</span>
+                      <span class="text-slate-100 font-bold bg-slate-800 px-2.5 py-1 rounded border border-slate-700">50.0% (\(0.50 I_0\))</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-slate-800 pt-2.5">
+                      <span class="text-slate-300 font-sans">ความเข้มแสงผ่าน P2 (\(I_2\)):</span>
+                      <span id="val-transmitted-intensity" class="text-amber-400 font-bold text-sm sm:text-base bg-amber-950/40 px-2.5 py-1 rounded border border-amber-800/80">25.0% (\(0.25 I_0\))</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-slate-800 pt-2.5">
+                      <span class="text-slate-300 font-sans">สถานะแสงที่ผ่านออก:</span>
+                      <span id="lbl-polarization-status" class="text-emerald-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700">แสงโพลาไรส์เชิงเส้น</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="text-[11px] text-slate-400 border-t border-slate-800/80 pt-2.5 flex items-center gap-2">
+                  <i class="fa-solid fa-circle-info text-amber-400 shrink-0"></i>
+                  <span>ตามกฎของมาลุส \(I_2 = I_1 \cos^2\theta\) เมื่อแผ่นตั้งฉากกัน (\(\theta=90^\circ, 270^\circ\)) แสงจะมืดสนิท (\(I_2 = 0\))</span>
+                </div>
               </div>
             </div>
           </div>

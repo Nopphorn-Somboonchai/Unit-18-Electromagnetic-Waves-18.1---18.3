@@ -16,14 +16,38 @@ export class CanvasRenderer {
 
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.dpr = window.devicePixelRatio || 1;
+    this.dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    this.onResize = null;
 
     // Resize canvas for sharp rendering on high-DPI (Retina) screens
     this.resize();
 
     // Bind window resize event
-    this._handleResize = this.resize.bind(this);
-    window.addEventListener('resize', this._handleResize);
+    this._handleResize = () => {
+      this.resize();
+      if (typeof this.onResize === 'function') {
+        this.onResize();
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', this._handleResize);
+    }
+
+    // Bind ResizeObserver for robust layout changes (tab show/hide, orientation change)
+    if (typeof ResizeObserver !== 'undefined' && this.canvas.parentElement) {
+      this._resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const cr = entry.contentRect;
+          if (cr.width > 0 && (Math.abs(cr.width - this.width) > 2 || Math.abs(cr.height - this.height) > 2)) {
+            this.resize();
+            if (typeof this.onResize === 'function') {
+              this.onResize();
+            }
+          }
+        }
+      });
+      this._resizeObserver.observe(this.canvas.parentElement);
+    }
   }
 
   /**
@@ -153,9 +177,61 @@ export class CanvasRenderer {
   }
 
   /**
+   * Draw stacked multi-line label
+   * @param {string[]} lines
+   * @param {number} x
+   * @param {number} y
+   * @param {Object} [options]
+   */
+  drawStackedLabel(lines, x, y, {
+    font = '11px Sarabun, sans-serif',
+    color = '#F8FAFC',
+    align = 'center',
+    lineHeight = 15,
+    bgColor = null,
+    padding = 4
+  } = {}) {
+    if (!lines || lines.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.font = font;
+    this.ctx.textAlign = align;
+    this.ctx.textBaseline = 'middle';
+
+    const totalHeight = lines.length * lineHeight;
+    const startY = y - totalHeight / 2 + lineHeight / 2;
+
+    if (bgColor) {
+      let maxWidth = 0;
+      for (const line of lines) {
+        const w = this.ctx.measureText(line).width;
+        if (w > maxWidth) maxWidth = w;
+      }
+      let rectX = x - maxWidth / 2 - padding;
+      if (align === 'left') rectX = x - padding;
+      if (align === 'right') rectX = x - maxWidth - padding;
+
+      this.ctx.fillStyle = bgColor;
+      this.ctx.fillRect(rectX, y - totalHeight / 2 - padding / 2, maxWidth + padding * 2, totalHeight + padding);
+    }
+
+    this.ctx.fillStyle = color;
+    lines.forEach((line, index) => {
+      this.ctx.fillText(line, x, startY + index * lineHeight);
+    });
+
+    this.ctx.restore();
+  }
+
+  /**
    * Cleanup event listeners on destroy
    */
   destroy() {
-    window.removeEventListener('resize', this._handleResize);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this._handleResize);
+    }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+    }
   }
 }
