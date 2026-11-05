@@ -5,6 +5,7 @@
  */
 
 import { KaTeXAdapter } from '../formula/katex-adapter.js';
+import { SimulatorLoader } from './simulator-loader.js';
 
 export class TabNavigatorAdapter {
   static isExamInProgress = false;
@@ -141,6 +142,11 @@ export class TabNavigatorAdapter {
   static handleSimulatorLifecycle(tabId) {
     const { emWaveSim, spectrumSim, polarizationSim } = this.simulators;
 
+    // Trigger loading progression for the active tab (auto-skips if already loaded)
+    SimulatorLoader.load(tabId, {
+      duration: 650
+    });
+
     if (tabId === '18-1-wave') {
       if (emWaveSim) {
         if (typeof requestAnimationFrame !== 'undefined') {
@@ -191,6 +197,16 @@ export class TabNavigatorAdapter {
   }
 
   /**
+   * Force reload simulator with progression animation
+   * @param {string} tabId
+   */
+  static reloadSimulator(tabId) {
+    SimulatorLoader.reload(tabId, () => {
+      this.handleSimulatorLifecycle(tabId);
+    });
+  }
+
+  /**
    * Toggle mobile navigation menu
    */
   static toggleMobileMenu() {
@@ -218,12 +234,14 @@ export class TabNavigatorAdapter {
    */
   static init(simulators = {}) {
     this.simulators = simulators;
+    SimulatorLoader.initGlobalHandlers();
 
     // Attach navigation helper functions to global window object
     if (typeof window !== 'undefined') {
       window.showSection = (sectionId) => this.showSection(sectionId);
       window.switchReviewTab = (tabId) => this.switchReviewTab(tabId);
       window.toggleMobileMenu = () => this.toggleMobileMenu();
+      window.reloadSimulator = (tabId) => this.reloadSimulator(tabId);
     }
 
     // Default to home section unless an active exam session was restored

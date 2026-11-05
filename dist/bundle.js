@@ -223,23 +223,51 @@
       }
       this.canvas = canvas;
       this.ctx = canvas.getContext("2d");
-      this.dpr = window.devicePixelRatio || 1;
+      this.dpr = typeof window !== "undefined" && window.devicePixelRatio || 1;
+      this.onResize = null;
       this.resize();
-      this._handleResize = this.resize.bind(this);
-      window.addEventListener("resize", this._handleResize);
+      this._handleResize = () => {
+        this.resize();
+        if (typeof this.onResize === "function") {
+          this.onResize();
+        }
+      };
+      if (typeof window !== "undefined") {
+        window.addEventListener("resize", this._handleResize);
+      }
+      if (typeof ResizeObserver !== "undefined") {
+        this._resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+              if (Math.abs(width - this.width) > 1 || Math.abs(height - this.height) > 1) {
+                this.resize();
+                if (typeof this.onResize === "function") {
+                  this.onResize();
+                }
+              }
+            }
+          }
+        });
+        this._resizeObserver.observe(this.canvas);
+      }
     }
     /**
      * Handle canvas resize and scale for high DPI displays
      */
     resize() {
       const rect = this.canvas.getBoundingClientRect();
-      const width = rect.width || this.canvas.width || 800;
-      const height = rect.height || this.canvas.height || 400;
+      const width = Math.round(rect.width) || this.canvas.clientWidth || 800;
+      const height = Math.round(rect.height) || this.canvas.clientHeight || 360;
       this.width = width;
       this.height = height;
-      this.canvas.width = Math.floor(width * this.dpr);
-      this.canvas.height = Math.floor(height * this.dpr);
-      this.ctx.scale(this.dpr, this.dpr);
+      const targetWidth = Math.floor(width * this.dpr);
+      const targetHeight = Math.floor(height * this.dpr);
+      if (this.canvas.width !== targetWidth || this.canvas.height !== targetHeight) {
+        this.canvas.width = targetWidth;
+        this.canvas.height = targetHeight;
+      }
+      this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     }
     /**
      * Clear canvas viewport
@@ -339,10 +367,55 @@
       this.ctx.restore();
     }
     /**
+     * Draw stacked multi-line label
+     * @param {string[]} lines
+     * @param {number} x
+     * @param {number} y
+     * @param {Object} [options]
+     */
+    drawStackedLabel(lines, x, y, {
+      font = "11px Sarabun, sans-serif",
+      color = "#F8FAFC",
+      align = "center",
+      lineHeight = 15,
+      bgColor = null,
+      padding = 4
+    } = {}) {
+      if (!lines || lines.length === 0) return;
+      this.ctx.save();
+      this.ctx.font = font;
+      this.ctx.textAlign = align;
+      this.ctx.textBaseline = "middle";
+      const totalHeight = lines.length * lineHeight;
+      const startY = y - totalHeight / 2 + lineHeight / 2;
+      if (bgColor) {
+        let maxWidth = 0;
+        for (const line of lines) {
+          const w = this.ctx.measureText(line).width;
+          if (w > maxWidth) maxWidth = w;
+        }
+        let rectX = x - maxWidth / 2 - padding;
+        if (align === "left") rectX = x - padding;
+        if (align === "right") rectX = x - maxWidth - padding;
+        this.ctx.fillStyle = bgColor;
+        this.ctx.fillRect(rectX, y - totalHeight / 2 - padding / 2, maxWidth + padding * 2, totalHeight + padding);
+      }
+      this.ctx.fillStyle = color;
+      lines.forEach((line, index) => {
+        this.ctx.fillText(line, x, startY + index * lineHeight);
+      });
+      this.ctx.restore();
+    }
+    /**
      * Cleanup event listeners on destroy
      */
     destroy() {
-      window.removeEventListener("resize", this._handleResize);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", this._handleResize);
+      }
+      if (this._resizeObserver) {
+        this._resizeObserver.disconnect();
+      }
     }
   };
 
@@ -366,30 +439,33 @@
     render(state) {
       const { phaseShift = 0, amplitude = 70 } = state;
       this.clear("#090D16");
-      const originX = 70;
+      const isCompact = this.width < 640;
+      const originX = Math.max(45, Math.min(70, this.width * 0.1));
       const originY = this.height / 2 + 10;
-      const axisLengthX = this.width - 120;
-      this.drawAxes(originX, originY, axisLengthX);
-      const samples = 120;
+      const axisLengthX = Math.max(160, this.width - originX - (isCompact ? 50 : 85));
+      const maxAllowedAmp = Math.max(25, originY - 45);
+      const waveAmp = Math.max(28, Math.min(maxAllowedAmp, (this.height - 90) * 0.3));
+      this.drawAxes(originX, originY, axisLengthX, waveAmp, isCompact);
+      const samples = isCompact ? 80 : 120;
       const stepX = axisLengthX / samples;
-      const numCycles = 2.5;
+      const numCycles = isCompact ? 2 : 2.5;
       const k = 2 * Math.PI * numCycles / axisLengthX;
       const ePoints = [];
       const bPoints = [];
       for (let i = 0; i <= samples; i++) {
         const px = i * stepX;
         const val = Math.sin(k * px - phaseShift);
-        const eY = originY - val * amplitude;
+        const eY = originY - val * waveAmp;
         const eX = originX + px;
         ePoints.push({ x: eX, y: eY, val });
-        const bLen = val * amplitude * 0.7;
+        const bLen = val * waveAmp * 0.7;
         const bX = originX + px + bLen * Math.cos(this.tiltAngle);
         const bY = originY + bLen * Math.sin(this.tiltAngle);
         bPoints.push({ x: bX, y: bY, val });
       }
       this.drawEnvelope(originX, originY, ePoints, "#cc785c", "rgba(204, 120, 92, 0.15)");
       this.drawEnvelope(originX, originY, bPoints, "#5db8a6", "rgba(93, 184, 166, 0.15)");
-      const arrowInterval = 6;
+      const arrowInterval = isCompact ? 8 : 6;
       for (let i = 0; i <= samples; i += arrowInterval) {
         const eP = ePoints[i];
         const bP = bPoints[i];
@@ -402,30 +478,42 @@
         }
       }
       const endX = originX + axisLengthX;
-      this.drawArrow(endX - 40, originY, endX + 15, originY, "#10B981", 3, 10);
-      this.drawLabel("v (\u0E17\u0E34\u0E28\u0E01\u0E32\u0E23\u0E40\u0E04\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48)", endX + 25, originY - 15, {
-        font: "bold 12px Prompt, sans-serif",
+      this.drawArrow(endX - 35, originY, endX + 12, originY, "#10B981", 2.6, 8);
+      const vLabel = isCompact ? "v" : "v (\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48)";
+      this.drawLabel(vLabel, endX + (isCompact ? 15 : 22), originY - (isCompact ? 12 : 16), {
+        font: "bold 11px Prompt, sans-serif",
         color: "#10B981",
         align: "right",
-        bgColor: "rgba(16, 185, 129, 0.15)"
+        bgColor: "rgba(16, 185, 129, 0.2)",
+        padding: 3
       });
-      this.drawLegend();
+      this.drawLegend(isCompact);
     }
     /**
-     * Draw 3D coordinate system axes
+     * Draw 3D coordinate system axes scaled proportionally to wave amplitude
      */
-    drawAxes(ox, oy, axisLen) {
-      this.drawLine(ox, oy, ox + axisLen + 20, oy, "#64748B", 1.5);
-      this.drawLabel("X (\u0E41\u0E01\u0E19\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48)", ox + axisLen + 25, oy + 15, { font: "11px Sarabun, sans-serif", color: "#94A3B8" });
-      this.drawLine(ox, oy + 110, ox, oy - 110, "#cc785c", 1.5, [4, 4]);
-      this.drawLabel("+E (\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32)", ox, oy - 120, { font: "bold 12px Prompt, sans-serif", color: "#cc785c" });
-      const zLen = 90;
+    drawAxes(ox, oy, axisLen, amplitude, isCompact) {
+      this.drawLine(ox, oy, ox + axisLen + 15, oy, "#64748B", 1.5);
+      this.drawLabel("X", ox + axisLen + 18, oy + (isCompact ? 12 : 15), {
+        font: "10px Sarabun, sans-serif",
+        color: "#94A3B8"
+      });
+      const ySpan = amplitude * 1.35;
+      this.drawLine(ox, oy + ySpan, ox, oy - ySpan, "#cc785c", 1.5, [4, 4]);
+      this.drawLabel("+E", ox, oy - ySpan - 10, {
+        font: isCompact ? "bold 11px Prompt, sans-serif" : "bold 12px Prompt, sans-serif",
+        color: "#cc785c"
+      });
+      const zLen = amplitude * 1.2;
       const zX1 = ox - zLen * Math.cos(this.tiltAngle);
       const zY1 = oy - zLen * Math.sin(this.tiltAngle);
       const zX2 = ox + zLen * Math.cos(this.tiltAngle);
       const zY2 = oy + zLen * Math.sin(this.tiltAngle);
       this.drawLine(zX1, zY1, zX2, zY2, "#5db8a6", 1.5, [4, 4]);
-      this.drawLabel("+B (\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01)", zX2 + 15, zY2 + 10, { font: "bold 12px Prompt, sans-serif", color: "#5db8a6" });
+      this.drawLabel("+B", zX2 + 10, zY2 + 8, {
+        font: isCompact ? "bold 11px Prompt, sans-serif" : "bold 12px Prompt, sans-serif",
+        color: "#5db8a6"
+      });
     }
     /**
      * Draw wave envelope curve
@@ -448,22 +536,50 @@
       this.ctx.restore();
     }
     /**
-     * Draw On-Canvas Legend for Vector Fields
+     * Draw On-Canvas Legend for Vector Fields (Responsive & Collision-Free)
      */
-    drawLegend() {
+    drawLegend(isCompact) {
+      if (isCompact) {
+        const lx2 = 14;
+        const ly2 = 14;
+        this.drawLabel("\u25CF E (\u0E44\u0E1F\u0E1F\u0E49\u0E32) | \u25CF B (\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01) | \u25B6 v", lx2, ly2, {
+          font: "10px JetBrains Mono, monospace",
+          color: "#E2E8F0",
+          align: "left",
+          bgColor: "rgba(15, 23, 42, 0.9)",
+          padding: 5
+        });
+        return;
+      }
       const lx = 20;
-      const ly = 20;
+      const ly = 16;
+      const boxW = 180;
+      const boxH = 68;
       this.ctx.save();
-      this.ctx.fillStyle = "rgba(24, 23, 21, 0.9)";
-      this.ctx.strokeStyle = "rgba(230, 223, 216, 0.15)";
+      this.ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
       this.ctx.lineWidth = 1;
-      this.ctx.fillRect(lx, ly, 190, 75);
-      this.ctx.strokeRect(lx, ly, 190, 75);
-      this.drawArrow(lx + 10, ly + 20, lx + 35, ly + 20, "#cc785c", 2, 4);
-      this.drawLabel("\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32 E (\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01)", lx + 45, ly + 20, { font: "11px Sarabun, sans-serif", color: "#F8FAFC", align: "left" });
-      this.drawArrow(lx + 10, ly + 40, lx + 35, ly + 40, "#5db8a6", 2, 4);
-      this.drawLabel("\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01 B (\u0E15\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01)", lx + 45, ly + 40, { font: "11px Sarabun, sans-serif", color: "#F8FAFC", align: "left" });
-      this.drawLabel("\u0E01\u0E0E\u0E21\u0E37\u0E2D\u0E02\u0E27\u0E32: E \xD7 B = v (\u0E40\u0E1F\u0E2A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19)", lx + 10, ly + 60, { font: "10px Sarabun, sans-serif", color: "#10B981", align: "left" });
+      this.ctx.beginPath();
+      this.ctx.roundRect(lx, ly, boxW, boxH, 8);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.drawArrow(lx + 10, ly + 18, lx + 30, ly + 18, "#cc785c", 2, 4);
+      this.drawLabel("\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C E (\u0E2A\u0E19\u0E32\u0E21\u0E44\u0E1F\u0E1F\u0E49\u0E32)", lx + 38, ly + 18, {
+        font: "11px Sarabun, sans-serif",
+        color: "#F8FAFC",
+        align: "left"
+      });
+      this.drawArrow(lx + 10, ly + 36, lx + 30, ly + 36, "#5db8a6", 2, 4);
+      this.drawLabel("\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C B (\u0E2A\u0E19\u0E32\u0E21\u0E41\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E47\u0E01)", lx + 38, ly + 36, {
+        font: "11px Sarabun, sans-serif",
+        color: "#F8FAFC",
+        align: "left"
+      });
+      this.drawLabel("\u0E01\u0E0E\u0E21\u0E37\u0E2D\u0E02\u0E27\u0E32: E \xD7 B = v", lx + 10, ly + 54, {
+        font: "10px Sarabun, sans-serif",
+        color: "#10B981",
+        align: "left"
+      });
       this.ctx.restore();
     }
   };
@@ -650,14 +766,19 @@
     render(state) {
       const { selectedBand, frequency = 5e14 } = state;
       this.clear("#090D16");
-      const paddingX = 40;
-      const barY = 60;
-      const barHeight = 60;
-      const barWidth = this.width - paddingX * 2;
+      const width = this.width;
+      const height = this.height;
+      const isCompact = width < 768;
+      const isUltraCompact = width < 480;
+      const paddingX = Math.max(16, width * 0.035);
+      const barWidth = width - paddingX * 2;
       const logMin = Math.log10(3e3);
       const logMax = Math.log10(1e22);
+      const barY = isCompact ? 68 : 78;
+      const barHeight = isCompact ? 52 : 62;
       const numBands = SPECTRUM_BANDS.length;
       const bandWidth = barWidth / numBands;
+      const shortNames = ["\u0E27\u0E34\u0E17\u0E22\u0E38", "\u0E44\u0E21\u0E42\u0E04\u0E23", "IR", "\u0E41\u0E2A\u0E07", "UV", "X-ray", "\u0E41\u0E01\u0E21\u0E21\u0E32"];
       for (let i = 0; i < numBands; i++) {
         const band = SPECTRUM_BANDS[i];
         const bx = paddingX + i * bandWidth;
@@ -672,21 +793,22 @@
           this.ctx.lineWidth = 3;
           this.ctx.strokeRect(bx - 1, barY - 2, bandWidth + 2, barHeight + 4);
         }
-        this.drawLabel(band.nameThai, bx + bandWidth / 2, barY - 15, {
-          font: isSelected ? "bold 12px Prompt, sans-serif" : "11px Prompt, sans-serif",
+        const bandTitle = isCompact ? shortNames[i] : band.nameThai;
+        this.drawLabel(bandTitle, bx + bandWidth / 2, barY - (isCompact ? 12 : 16), {
+          font: isSelected ? isCompact ? "bold 11px Prompt, sans-serif" : "bold 12px Prompt, sans-serif" : isCompact ? "10px Prompt, sans-serif" : "11px Prompt, sans-serif",
           color: isSelected ? "#FFFFFF" : "#94A3B8"
         });
       }
-      const axisY = barY + barHeight + 25;
+      const axisY = barY + barHeight + (isCompact ? 22 : 28);
       this.drawLine(paddingX, axisY, paddingX + barWidth, axisY, "#64748B", 1.5);
-      const logTicks = [3, 6, 9, 12, 15, 18, 21];
+      const logTicks = isCompact ? [3, 9, 15, 21] : [3, 6, 9, 12, 15, 18, 21];
       logTicks.forEach((exp) => {
         const frac = (exp - logMin) / (logMax - logMin);
         const tx = paddingX + frac * barWidth;
         this.drawLine(tx, axisY - 5, tx, axisY + 5, "#94A3B8", 1);
-        this.drawLabel(`10^${exp} Hz`, tx, axisY + 18, {
-          font: "10px JetBrains Mono, monospace",
-          color: "#64748B"
+        this.drawLabel(`10^${exp} Hz`, tx, axisY + (isCompact ? 15 : 18), {
+          font: isCompact ? "9px JetBrains Mono, monospace" : "10px JetBrains Mono, monospace",
+          color: "#94A3B8"
         });
       });
       const currentLog = Math.log10(Math.max(3e3, frequency));
@@ -695,20 +817,25 @@
       this.ctx.save();
       this.ctx.shadowColor = selectedBand ? selectedBand.color : "#06B6D4";
       this.ctx.shadowBlur = 12;
-      this.drawLine(cursorX, barY - 8, cursorX, barY + barHeight + 8, "#FFFFFF", 3);
+      this.drawLine(cursorX, barY - 6, cursorX, barY + barHeight + 6, "#FFFFFF", 3);
       this.ctx.restore();
       this.ctx.fillStyle = "#FFFFFF";
       this.ctx.beginPath();
-      this.ctx.moveTo(cursorX, barY - 12);
-      this.ctx.lineTo(cursorX - 7, barY - 22);
-      this.ctx.lineTo(cursorX + 7, barY - 22);
+      this.ctx.moveTo(cursorX, barY - 6);
+      this.ctx.lineTo(cursorX - 6, barY - 16);
+      this.ctx.lineTo(cursorX + 6, barY - 16);
       this.ctx.closePath();
       this.ctx.fill();
       const freqFormatted = this.formatFreqText(frequency);
-      this.drawLabel(freqFormatted, cursorX, barY - 32, {
-        font: "bold 12px JetBrains Mono, monospace",
-        color: "#06B6D4",
-        bgColor: "rgba(15, 23, 42, 0.9)",
+      const bandFullName = selectedBand ? selectedBand.nameThai : "";
+      const bannerText = isCompact ? `${bandFullName}: ${freqFormatted}` : `${bandFullName} (${freqFormatted})`;
+      const bannerMinX = paddingX + 80;
+      const bannerMaxX = paddingX + barWidth - 80;
+      const bannerX = Math.max(bannerMinX, Math.min(bannerMaxX, cursorX));
+      this.drawLabel(bannerText, bannerX, isCompact ? 20 : 26, {
+        font: isCompact ? "bold 11px JetBrains Mono, monospace" : "bold 13px JetBrains Mono, monospace",
+        color: selectedBand ? selectedBand.color : "#06B6D4",
+        bgColor: "rgba(15, 23, 42, 0.95)",
         padding: 6
       });
     }
@@ -779,6 +906,9 @@
       this.plotter = new SpectrumPlotter(canvas);
       this.frequency = APP_CONFIG.spectrumDefaults.initialFrequency;
       this.onInfoChangeCallback = null;
+      this.plotter.onResize = () => {
+        this.render();
+      };
       this._attachCanvasClickListener();
       this.updateFrequency(this.frequency);
     }
@@ -795,13 +925,24 @@
       this.render();
     }
     /**
-     * Handle user click on Canvas spectrum bar to select frequency
+     * Select a spectrum band by its ID and jump to its geometric center frequency
+     * @param {string} bandId - 'radio', 'microwave', 'infrared', 'visible', 'ultraviolet', 'xray', 'gamma'
+     */
+    selectBandById(bandId) {
+      const band = SPECTRUM_BANDS.find((b) => b.id === bandId);
+      if (band) {
+        const centerFreq = Math.sqrt(band.frequencyMin * band.frequencyMax);
+        this.updateFrequency(centerFreq);
+      }
+    }
+    /**
+     * Handle user click and touch on Canvas spectrum bar to select frequency
      */
     _attachCanvasClickListener() {
-      this.plotter.canvas.addEventListener("click", (evt) => {
+      const handleSelect = (evt) => {
         const rect = this.plotter.canvas.getBoundingClientRect();
         const clickX = evt.clientX - rect.left;
-        const paddingX = 40;
+        const paddingX = Math.max(16, this.plotter.width * 0.035);
         const barWidth = this.plotter.width - paddingX * 2;
         if (clickX >= paddingX && clickX <= paddingX + barWidth) {
           const frac = (clickX - paddingX) / barWidth;
@@ -811,7 +952,9 @@
           const targetFreq = Math.pow(10, targetLog);
           this.updateFrequency(targetFreq);
         }
-      });
+      };
+      this.plotter.canvas.addEventListener("click", handleSelect);
+      this.plotter.canvas.addEventListener("pointerdown", handleSelect);
     }
     /**
      * Render canvas
@@ -832,117 +975,234 @@
 
   // src/adapters/canvas/polaroid-plotter.js
   var PolaroidPlotter = class extends CanvasRenderer {
+    constructor(canvas) {
+      super(canvas);
+      this.lastState = {
+        analyzerAngle: 45,
+        intensity1: 50,
+        intensity2: 25,
+        isCrossed: false
+      };
+    }
+    /**
+     * Get center and active touch radius of Analyzer P2 for direct canvas interaction
+     * @returns {{x: number, y: number, radius: number}}
+     */
+    getP2Center() {
+      const width = this.width;
+      const height = this.height;
+      const startX = Math.max(16, width * 0.04);
+      const endX = Math.min(width - 16, width * 0.96);
+      const usableWidth = endX - startX;
+      const sheetHeight = Math.max(115, Math.min(170, height * 0.48));
+      return {
+        x: startX + usableWidth * 0.67,
+        y: height / 2,
+        radius: Math.max(50, sheetHeight * 0.55)
+      };
+    }
     /**
      * Render complete polarization setup
-     * @param {Object} state
-     * @param {number} state.analyzerAngle - Analyzer angle θ in degrees (0..360)
-     * @param {number} state.intensity1 - Intensity after P1 (e.g. 50%)
-     * @param {number} state.intensity2 - Transmitted intensity after P2 (e.g. 0..50%)
-     * @param {boolean} state.isCrossed - Whether polaroids are crossed (θ = 90° or 270°)
+     * @param {Object} [state]
+     * @param {number} [state.analyzerAngle=45] - Analyzer angle θ in degrees (0..360)
+     * @param {number} [state.intensity1=50] - Intensity after P1 (e.g. 50%)
+     * @param {number} [state.intensity2=25] - Transmitted intensity after P2 (e.g. 0..50%)
+     * @param {boolean} [state.isCrossed=false] - Whether polaroids are crossed (θ = 90° or 270°)
      */
     render(state) {
-      const { analyzerAngle = 45, intensity1 = 50, intensity2 = 25, isCrossed = false } = state;
+      if (state) {
+        this.lastState = { ...this.lastState, ...state };
+      }
+      const { analyzerAngle = 45, intensity1 = 50, intensity2 = 25, isCrossed = false } = this.lastState;
       this.clear("#090D16");
-      const centerY = this.height / 2;
-      const p1X = 260;
-      const p2X = 540;
-      this.drawLine(40, centerY, this.width - 50, centerY, "rgba(255, 255, 255, 0.15)", 1, [6, 6]);
-      this.drawUnpolarizedBeam(40, p1X - 30, centerY);
-      this.drawPolaroidSheet(p1X, centerY, 0, "P1: Polarizer", "#3B82F6");
-      this.drawPolarizedBeam(p1X + 30, p2X - 30, centerY, 0, intensity1);
-      this.drawPolaroidSheet(p2X, centerY, analyzerAngle, "P2: Analyzer", "#F59E0B");
-      this.drawTransmittedBeam(p2X + 30, this.width - 60, centerY, analyzerAngle, intensity2, isCrossed);
-      this.drawStatusOverlay(analyzerAngle, intensity2, isCrossed);
+      const width = this.width;
+      const height = this.height;
+      const isCompact = width < 640;
+      const isUltraCompact = width < 480;
+      const centerY = height / 2;
+      const startX = Math.max(16, width * 0.04);
+      const endX = Math.min(width - 16, width * 0.96);
+      const usableWidth = endX - startX;
+      const p1X = startX + usableWidth * 0.33;
+      const p2X = startX + usableWidth * 0.67;
+      const sheetWidth = Math.max(42, Math.min(68, width * 0.08));
+      const sheetHeight = Math.max(115, Math.min(170, height * 0.48));
+      const halfSheetW = sheetWidth / 2;
+      const gap = Math.max(6, Math.min(14, width * 0.015));
+      const rayLen = Math.max(18, Math.min(32, sheetHeight * 0.22));
+      this.drawLine(startX, centerY, endX, centerY, "rgba(255, 255, 255, 0.15)", 1, [6, 6]);
+      const secAX1 = startX + 4;
+      const secAX2 = p1X - halfSheetW - gap;
+      this.drawUnpolarizedBeam(secAX1, secAX2, centerY, rayLen, isCompact, isUltraCompact);
+      const p1Label = isCompact ? "P1" : "P1: Polarizer";
+      this.drawPolaroidSheet(p1X, centerY, 0, p1Label, "#3B82F6", sheetWidth, sheetHeight, isCompact, false);
+      const secBX1 = p1X + halfSheetW + gap;
+      const secBX2 = p2X - halfSheetW - gap;
+      this.drawPolarizedBeam(secBX1, secBX2, centerY, 0, intensity1, rayLen, isCompact, isUltraCompact);
+      const p2Label = isCompact ? "P2" : "P2: Analyzer";
+      this.drawPolaroidSheet(p2X, centerY, analyzerAngle, p2Label, "#F59E0B", sheetWidth, sheetHeight, isCompact, true);
+      const secCX1 = p2X + halfSheetW + gap;
+      const secCX2 = endX - 4;
+      this.drawTransmittedBeam(secCX1, secCX2, centerY, analyzerAngle, intensity2, isCrossed, rayLen, isCompact, isUltraCompact);
+      this.drawStatusOverlay(analyzerAngle, intensity2, isCrossed, isCompact);
     }
     /**
      * Draw Unpolarized Light Beam (multi-directional arrows)
      */
-    drawUnpolarizedBeam(x1, x2, cy) {
-      const numRays = 4;
+    drawUnpolarizedBeam(x1, x2, cy, rayLen, isCompact, isUltraCompact) {
+      if (x2 <= x1) return;
+      const numRays = isUltraCompact ? 2 : isCompact ? 3 : 4;
       const step = (x2 - x1) / numRays;
       for (let i = 0; i <= numRays; i++) {
         const rx = x1 + i * step;
-        this.drawLine(rx, cy - 35, rx, cy + 35, "rgba(239, 68, 68, 0.6)", 1.5);
-        this.drawLine(rx - 25, cy, rx + 25, cy, "rgba(59, 130, 246, 0.6)", 1.5);
-        this.drawLine(rx - 18, cy - 18, rx + 18, cy + 18, "rgba(245, 158, 11, 0.5)", 1.2);
-        this.drawLine(rx - 18, cy + 18, rx + 18, cy - 18, "rgba(245, 158, 11, 0.5)", 1.2);
+        this.drawLine(rx, cy - rayLen, rx, cy + rayLen, "rgba(239, 68, 68, 0.65)", 1.6);
+        this.drawLine(rx - rayLen * 0.75, cy, rx + rayLen * 0.75, cy, "rgba(59, 130, 246, 0.65)", 1.6);
+        this.drawLine(rx - rayLen * 0.55, cy - rayLen * 0.55, rx + rayLen * 0.55, cy + rayLen * 0.55, "rgba(245, 158, 11, 0.55)", 1.2);
+        this.drawLine(rx - rayLen * 0.55, cy + rayLen * 0.55, rx + rayLen * 0.55, cy - rayLen * 0.55, "rgba(245, 158, 11, 0.55)", 1.2);
       }
-      this.drawLabel("\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C (I\u2080 = 100%)", (x1 + x2) / 2, cy + 65, {
-        font: "11px Sarabun, sans-serif",
-        color: "#94A3B8"
-      });
+      const labelX = (x1 + x2) / 2;
+      const labelY = cy + rayLen + (isCompact ? 38 : 44);
+      if (isCompact) {
+        this.drawStackedLabel(["\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C", "(I\u2080 = 100%)"], labelX, labelY, {
+          font: isUltraCompact ? "10px Sarabun, sans-serif" : "11px Sarabun, sans-serif",
+          color: "#94A3B8",
+          lineHeight: 14
+        });
+      } else {
+        this.drawLabel("\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C (I\u2080 = 100%)", labelX, labelY, {
+          font: "11px Sarabun, sans-serif",
+          color: "#94A3B8"
+        });
+      }
     }
     /**
      * Draw Polarized Light Beam (Single plane oscillation)
      */
-    drawPolarizedBeam(x1, x2, cy, angleDeg, intensity) {
-      const numRays = 4;
+    drawPolarizedBeam(x1, x2, cy, angleDeg, intensity, rayLen, isCompact, isUltraCompact) {
+      if (x2 <= x1) return;
+      const numRays = isUltraCompact ? 2 : isCompact ? 3 : 4;
       const step = (x2 - x1) / numRays;
-      const alpha = Math.max(0.15, intensity / 50);
+      const alpha = Math.max(0.18, intensity / 50);
+      const headSize = Math.max(4, Math.min(7, rayLen * 0.22));
       for (let i = 0; i <= numRays; i++) {
         const rx = x1 + i * step;
-        this.drawLine(rx, cy - 30, rx, cy + 30, `rgba(239, 68, 68, ${alpha})`, 2.2);
-        this.drawArrow(rx, cy, rx, cy - 30, `rgba(239, 68, 68, ${alpha})`, 2, 4);
-        this.drawArrow(rx, cy, rx, cy + 30, `rgba(239, 68, 68, ${alpha})`, 2, 4);
+        this.drawLine(rx, cy - rayLen, rx, cy + rayLen, `rgba(239, 68, 68, ${alpha})`, 2.2);
+        this.drawArrow(rx, cy, rx, cy - rayLen, `rgba(239, 68, 68, ${alpha})`, 2, headSize);
+        this.drawArrow(rx, cy, rx, cy + rayLen, `rgba(239, 68, 68, ${alpha})`, 2, headSize);
       }
-      this.drawLabel(`\u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E0A\u0E34\u0E07\u0E40\u0E2A\u0E49\u0E19 (I\u2081 = ${intensity.toFixed(1)}%)`, (x1 + x2) / 2, cy + 65, {
-        font: "11px Sarabun, sans-serif",
-        color: "#EF4444"
-      });
+      const labelX = (x1 + x2) / 2;
+      const labelY = cy + rayLen + (isCompact ? 38 : 44);
+      if (isCompact) {
+        this.drawStackedLabel(["\u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E0A\u0E34\u0E07\u0E40\u0E2A\u0E49\u0E19", `(I\u2081 = ${intensity.toFixed(1)}%)`], labelX, labelY, {
+          font: isUltraCompact ? "10px Sarabun, sans-serif" : "11px Sarabun, sans-serif",
+          color: "#EF4444",
+          lineHeight: 14
+        });
+      } else {
+        this.drawLabel(`\u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E0A\u0E34\u0E07\u0E40\u0E2A\u0E49\u0E19 (I\u2081 = ${intensity.toFixed(1)}%)`, labelX, labelY, {
+          font: "11px Sarabun, sans-serif",
+          color: "#EF4444"
+        });
+      }
     }
     /**
      * Draw Transmitted Light Beam after Analyzer P2
      */
-    drawTransmittedBeam(x1, x2, cy, angleDeg, intensity, isCrossed) {
+    drawTransmittedBeam(x1, x2, cy, angleDeg, intensity, isCrossed, rayLen, isCompact, isUltraCompact) {
+      if (x2 <= x1) return;
+      const labelX = (x1 + x2) / 2;
       if (isCrossed || intensity <= 0.1) {
-        this.drawLabel("\u{1F512} \u0E41\u0E2A\u0E07\u0E16\u0E39\u0E01\u0E01\u0E31\u0E49\u0E19\u0E2A\u0E21\u0E1A\u0E39\u0E23\u0E13\u0E4C (I\u2082 = 0%)", (x1 + x2) / 2, cy, {
-          font: "bold 12px Prompt, sans-serif",
-          color: "#EF4444",
-          bgColor: "rgba(239, 68, 68, 0.2)",
-          padding: 6
-        });
+        if (isCompact) {
+          this.drawStackedLabel(["\u{1F512} \u0E41\u0E2A\u0E07\u0E16\u0E39\u0E01\u0E01\u0E31\u0E49\u0E19", "(I\u2082 = 0%)"], labelX, cy, {
+            font: isUltraCompact ? "bold 10px Prompt, sans-serif" : "bold 11px Prompt, sans-serif",
+            color: "#EF4444",
+            bgColor: "rgba(239, 68, 68, 0.25)",
+            padding: 4,
+            lineHeight: 14
+          });
+        } else {
+          this.drawLabel("\u{1F512} \u0E41\u0E2A\u0E07\u0E16\u0E39\u0E01\u0E01\u0E31\u0E49\u0E19\u0E2A\u0E21\u0E1A\u0E39\u0E23\u0E13\u0E4C (I\u2082 = 0%)", labelX, cy, {
+            font: "bold 12px Prompt, sans-serif",
+            color: "#EF4444",
+            bgColor: "rgba(239, 68, 68, 0.2)",
+            padding: 6
+          });
+        }
         return;
       }
-      const numRays = 3;
+      const numRays = isUltraCompact ? 2 : isCompact ? 2 : 3;
       const step = (x2 - x1) / numRays;
-      const alpha = Math.min(1, Math.max(0.1, intensity / 50));
+      const alpha = Math.min(1, Math.max(0.15, intensity / 50));
       const rad = angleDeg * Math.PI / 180;
-      const armLen = 30 * (intensity / 50);
+      const armLen = rayLen * (intensity / 50);
+      const headSize = Math.max(4, Math.min(7, rayLen * 0.22));
       for (let i = 0; i <= numRays; i++) {
         const rx = x1 + i * step;
         const dx = armLen * Math.sin(rad);
         const dy = armLen * Math.cos(rad);
         this.drawLine(rx - dx, cy - dy, rx + dx, cy + dy, `rgba(245, 158, 11, ${alpha})`, 2.5);
-        this.drawArrow(rx, cy, rx + dx, cy + dy, `rgba(245, 158, 11, ${alpha})`, 2, 4);
+        this.drawArrow(rx, cy, rx + dx, cy + dy, `rgba(245, 158, 11, ${alpha})`, 2, headSize);
       }
-      this.drawLabel(`\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01 (I\u2082 = ${intensity.toFixed(1)}%)`, (x1 + x2) / 2, cy + 65, {
-        font: "bold 12px Prompt, sans-serif",
-        color: "#F59E0B"
-      });
+      const labelY = cy + rayLen + (isCompact ? 38 : 44);
+      if (isCompact) {
+        this.drawStackedLabel(["\u0E41\u0E2A\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01", `(I\u2082 = ${intensity.toFixed(1)}%)`], labelX, labelY, {
+          font: isUltraCompact ? "bold 10px Prompt, sans-serif" : "bold 11px Prompt, sans-serif",
+          color: "#F59E0B",
+          lineHeight: 14
+        });
+      } else {
+        this.drawLabel(`\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E41\u0E2A\u0E07\u0E1C\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01 (I\u2082 = ${intensity.toFixed(1)}%)`, labelX, labelY, {
+          font: "bold 12px Prompt, sans-serif",
+          color: "#F59E0B"
+        });
+      }
     }
     /**
-     * Draw Polaroid Filter Sheet Frame and Slits
+     * Draw Polaroid Filter Sheet Frame, Transmission Slits, and Rotary Dial
      */
-    drawPolaroidSheet(cx, cy, angleDeg, label, accentColor) {
-      const width = 70;
-      const height = 150;
+    drawPolaroidSheet(cx, cy, angleDeg, label, accentColor, width, height, isCompact, isRotatable = false) {
       const rad = angleDeg * Math.PI / 180;
       this.ctx.save();
       this.ctx.translate(cx, cy);
-      this.ctx.fillStyle = "rgba(30, 41, 59, 0.65)";
+      if (isRotatable) {
+        const ringRadius = height * 0.52;
+        this.ctx.save();
+        this.ctx.strokeStyle = "rgba(245, 158, 11, 0.2)";
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([3, 4]);
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+        this.ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+        this.ctx.setLineDash([]);
+        [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].forEach((tickRad) => {
+          const tx1 = (ringRadius - 5) * Math.sin(tickRad);
+          const ty1 = -(ringRadius - 5) * Math.cos(tickRad);
+          const tx2 = (ringRadius + 5) * Math.sin(tickRad);
+          const ty2 = -(ringRadius + 5) * Math.cos(tickRad);
+          this.ctx.beginPath();
+          this.ctx.moveTo(tx1, ty1);
+          this.ctx.lineTo(tx2, ty2);
+          this.ctx.stroke();
+        });
+        this.ctx.restore();
+      }
+      this.ctx.fillStyle = "rgba(30, 41, 59, 0.75)";
       this.ctx.strokeStyle = accentColor;
-      this.ctx.lineWidth = 2;
+      this.ctx.lineWidth = 2.2;
       this.ctx.beginPath();
-      this.ctx.roundRect(-width / 2, -height / 2, width, height, 10);
+      this.ctx.roundRect(-width / 2, -height / 2, width, height, 8);
       this.ctx.fill();
       this.ctx.stroke();
       this.ctx.strokeStyle = accentColor;
-      this.ctx.lineWidth = 1.5;
+      this.ctx.lineWidth = 1.6;
       this.ctx.setLineDash([4, 4]);
-      const numSlits = 5;
-      const slitLength = 110;
-      for (let i = -2; i <= 2; i++) {
-        const offsetX = i * 12;
+      const numSlits = isCompact ? 3 : 5;
+      const slitLength = height * 0.74;
+      const slitSpacing = width * 0.18;
+      const halfCount = Math.floor(numSlits / 2);
+      for (let i = -halfCount; i <= halfCount; i++) {
+        const offsetX = i * slitSpacing;
         const dx = slitLength / 2 * Math.sin(rad);
         const dy = slitLength / 2 * Math.cos(rad);
         this.ctx.beginPath();
@@ -950,22 +1210,41 @@
         this.ctx.lineTo(offsetX + dx, dy);
         this.ctx.stroke();
       }
+      if (isRotatable) {
+        const cdx = slitLength / 2 * Math.sin(rad);
+        const cdy = slitLength / 2 * Math.cos(rad);
+        this.drawArrow(0, 0, cdx, cdy, accentColor, 1.8, 5);
+        this.drawArrow(0, 0, -cdx, -cdy, accentColor, 1.8, 5);
+      }
       this.ctx.restore();
-      this.drawLabel(`${label} (${angleDeg}\xB0)`, cx, cy + height / 2 + 20, {
-        font: "bold 12px Prompt, sans-serif",
+      const font = isCompact ? "bold 11px Prompt, sans-serif" : "bold 12px Prompt, sans-serif";
+      this.drawLabel(`${label} (${angleDeg}\xB0)`, cx, cy + height / 2 + (isCompact ? 18 : 22), {
+        font,
         color: accentColor
       });
+      if (isRotatable && isCompact) {
+        this.drawLabel("\u21BB \u0E41\u0E15\u0E30\u0E2B\u0E21\u0E38\u0E19\u0E44\u0E14\u0E49", cx, cy - height / 2 - 14, {
+          font: "9px Prompt, sans-serif",
+          color: "#F59E0B",
+          bgColor: "rgba(245, 158, 11, 0.15)",
+          padding: 3
+        });
+      }
     }
     /**
      * Draw Overlay status info
      */
-    drawStatusOverlay(angleDeg, intensity2, isCrossed) {
-      this.drawLabel(`\u0E21\u0E38\u0E21 \u03B8 = ${angleDeg}\xB0`, 20, 20, {
-        font: "bold 13px JetBrains Mono, monospace",
+    drawStatusOverlay(angleDeg, intensity2, isCrossed, isCompact) {
+      const font = isCompact ? "bold 11px JetBrains Mono, monospace" : "bold 13px JetBrains Mono, monospace";
+      const padding = isCompact ? 4 : 6;
+      const x = isCompact ? 12 : 20;
+      const y = isCompact ? 16 : 20;
+      this.drawLabel(`\u0E21\u0E38\u0E21 \u03B8 = ${angleDeg}\xB0`, x, y, {
+        font,
         color: isCrossed ? "#EF4444" : "#F59E0B",
         align: "left",
-        bgColor: "rgba(15, 23, 42, 0.9)",
-        padding: 6
+        bgColor: "rgba(15, 23, 42, 0.92)",
+        padding
       });
     }
   };
@@ -1014,7 +1293,75 @@
       this.analyzerAngle = APP_CONFIG.polarizationDefaults.analyzerAngle;
       this.initialIntensity = APP_CONFIG.polarizationDefaults.initialIntensity;
       this.onIntensityChangeCallback = null;
+      this.onAngleChangeCallback = null;
+      this.plotter.onResize = () => {
+        this.render();
+      };
+      this._initCanvasPointerInteraction();
       this.setAnalyzerAngle(this.analyzerAngle);
+    }
+    /**
+     * Initialize direct touch/pointer rotation on Canvas for Analyzer P2
+     */
+    _initCanvasPointerInteraction() {
+      const canvas = this.plotter.canvas;
+      if (!canvas || typeof window === "undefined") return;
+      let isDragging = false;
+      const getTouchAngle = (evt) => {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = evt.clientX - rect.left;
+        const touchY = evt.clientY - rect.top;
+        const { x: p2X, y: p2Y } = this.plotter.getP2Center();
+        const dx = touchX - p2X;
+        const dy = touchY - p2Y;
+        let deg = Math.round(Math.atan2(dx, -dy) * (180 / Math.PI));
+        if (deg < 0) deg += 360;
+        return deg % 360;
+      };
+      const isNearP2 = (evt) => {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = evt.clientX - rect.left;
+        const touchY = evt.clientY - rect.top;
+        const { x: p2X, y: p2Y, radius } = this.plotter.getP2Center();
+        const dist = Math.hypot(touchX - p2X, touchY - p2Y);
+        return dist <= radius * 1.5;
+      };
+      this._onPointerDown = (evt) => {
+        if (isNearP2(evt)) {
+          isDragging = true;
+          try {
+            canvas.setPointerCapture(evt.pointerId);
+          } catch (_) {
+          }
+          const newAngle = getTouchAngle(evt);
+          this.setAnalyzerAngle(newAngle);
+          if (this.onAngleChangeCallback) {
+            this.onAngleChangeCallback(newAngle);
+          }
+        }
+      };
+      this._onPointerMove = (evt) => {
+        if (!isDragging) return;
+        evt.preventDefault();
+        const newAngle = getTouchAngle(evt);
+        this.setAnalyzerAngle(newAngle);
+        if (this.onAngleChangeCallback) {
+          this.onAngleChangeCallback(newAngle);
+        }
+      };
+      this._onPointerUp = (evt) => {
+        if (isDragging) {
+          isDragging = false;
+          try {
+            canvas.releasePointerCapture(evt.pointerId);
+          } catch (_) {
+          }
+        }
+      };
+      canvas.addEventListener("pointerdown", this._onPointerDown);
+      canvas.addEventListener("pointermove", this._onPointerMove);
+      canvas.addEventListener("pointerup", this._onPointerUp);
+      canvas.addEventListener("pointercancel", this._onPointerUp);
     }
     /**
      * Update analyzer angle θ2 and re-evaluate Malus's Law
@@ -1042,6 +1389,13 @@
       this.render();
     }
     /**
+     * Recalculate dimensions and re-render canvas
+     */
+    resizeAndRender() {
+      this.plotter.resize();
+      this.render();
+    }
+    /**
      * Render canvas
      */
     render() {
@@ -1056,6 +1410,13 @@
      * Cleanup resources
      */
     destroy() {
+      const canvas = this.plotter.canvas;
+      if (canvas && this._onPointerDown) {
+        canvas.removeEventListener("pointerdown", this._onPointerDown);
+        canvas.removeEventListener("pointermove", this._onPointerMove);
+        canvas.removeEventListener("pointerup", this._onPointerUp);
+        canvas.removeEventListener("pointercancel", this._onPointerUp);
+      }
       this.plotter.destroy();
     }
   };
@@ -1264,6 +1625,18 @@
         simulator.onUpdateCallback = ({ wavelength }) => {
           valWavelength.textContent = `${wavelength.toFixed(2)} m`;
         };
+        if (typeof window !== "undefined") {
+          window.adjustEMFrequency = (delta) => {
+            let current = parseFloat(sliderFreq.value) || 100;
+            let target = Math.max(10, Math.min(500, current + delta));
+            sliderFreq.value = target;
+            sliderFreq.dispatchEvent(new Event("input", { bubbles: true }));
+          };
+          window.setEMFrequencyPreset = (freq) => {
+            sliderFreq.value = Math.max(10, Math.min(500, freq));
+            sliderFreq.dispatchEvent(new Event("input", { bubbles: true }));
+          };
+        }
       }
       if (btnToggleAnim) {
         btnToggleAnim.addEventListener("click", () => {
@@ -1293,6 +1666,13 @@
         if (energyVal) energyVal.textContent = `${energyEv.toExponential(2)} eV`;
         if (appDesc) appDesc.textContent = band.applications;
       };
+      if (typeof window !== "undefined") {
+        window.selectSpectrumBandById = (bandId) => {
+          if (typeof simulator.selectBandById === "function") {
+            simulator.selectBandById(bandId);
+          }
+        };
+      }
     }
     /**
      * Bind controls for Simulator 18.3 (Polarization & Malus's Law)
@@ -1308,13 +1688,49 @@
           valAngle.textContent = `${angle}\xB0`;
           simulator.setAnalyzerAngle(angle);
         });
+        simulator.onAngleChangeCallback = (angle) => {
+          if (sliderAngle && parseInt(sliderAngle.value, 10) !== angle) {
+            sliderAngle.value = angle;
+          }
+          if (valAngle) {
+            valAngle.textContent = `${angle}\xB0`;
+          }
+        };
+        if (typeof window !== "undefined") {
+          window.adjustAnalyzerAngle = (delta) => {
+            let current = parseInt(sliderAngle.value, 10) || 0;
+            let target = (current + delta) % 360;
+            if (target < 0) target += 360;
+            sliderAngle.value = target;
+            sliderAngle.dispatchEvent(new Event("input", { bubbles: true }));
+          };
+          window.setAnalyzerAnglePreset = (angle) => {
+            let target = parseInt(angle, 10) % 360;
+            if (target < 0) target += 360;
+            sliderAngle.value = target;
+            sliderAngle.dispatchEvent(new Event("input", { bubbles: true }));
+          };
+        }
         simulator.onIntensityChangeCallback = ({ analyzerAngle, intensity2, isCrossed }) => {
           const frac = (intensity2 / 100).toFixed(2);
           valIntensity.innerHTML = `${intensity2.toFixed(1)}% (${KaTeXAdapter.renderToString(`${frac} I_0`)})`;
-          if (isCrossed) {
-            valIntensity.className = "text-sm font-bold font-mono text-red-400 bg-red-950/40 px-3 py-1.5 rounded-md border border-red-800";
+          if (isCrossed || intensity2 <= 0.05) {
+            valIntensity.className = "text-sm font-bold font-mono text-rose-400 bg-rose-950/40 px-3 py-1.5 rounded-md border border-rose-800";
           } else {
-            valIntensity.className = "text-sm font-bold font-mono text-amber-400 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700";
+            valIntensity.className = "text-sm font-bold font-mono text-amber-400 bg-amber-950/40 px-3 py-1.5 rounded-md border border-amber-800/80";
+          }
+          const lblStatus = document.getElementById("lbl-polarization-status");
+          if (lblStatus) {
+            if (isCrossed || intensity2 <= 0.05) {
+              lblStatus.textContent = "\u{1F512} \u0E41\u0E2A\u0E07\u0E16\u0E39\u0E01\u0E01\u0E31\u0E49\u0E19\u0E2A\u0E21\u0E1A\u0E39\u0E23\u0E13\u0E4C (\u0E21\u0E37\u0E14\u0E2A\u0E19\u0E34\u0E17)";
+              lblStatus.className = "text-rose-400 font-bold bg-rose-950/40 px-2.5 py-1 rounded border border-rose-800/80";
+            } else if (Math.abs(intensity2 - 50) < 0.1) {
+              lblStatus.textContent = "\u2728 \u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E0A\u0E34\u0E07\u0E40\u0E2A\u0E49\u0E19 (\u0E2A\u0E27\u0E48\u0E32\u0E07\u0E2A\u0E38\u0E14)";
+              lblStatus.className = "text-amber-400 font-bold bg-amber-950/40 px-2.5 py-1 rounded border border-amber-800/80";
+            } else {
+              lblStatus.textContent = "\u0E41\u0E2A\u0E07\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C\u0E40\u0E0A\u0E34\u0E07\u0E40\u0E2A\u0E49\u0E19";
+              lblStatus.className = "text-emerald-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700";
+            }
           }
         };
       }
@@ -1329,6 +1745,188 @@
     if (num < 1) return `${(num * 1e3).toFixed(1)} mm`;
     return `${num.toFixed(1)}`;
   }
+
+  // src/adapters/ui/simulator-loader.js
+  var SimulatorLoader = class _SimulatorLoader {
+    /**
+     * Tracks loaded state for each simulator to prevent unnecessary re-runs
+     * @type {Record<string, boolean>}
+     */
+    static loadedState = {
+      "18-1-wave": false,
+      "18-2-spectrum": false,
+      "18-3-polarization": false
+    };
+    /**
+     * Maps simulator id to DOM element prefix
+     * @type {Record<string, string>}
+     */
+    static prefixMap = {
+      "18-1-wave": "em-wave",
+      "18-2-spectrum": "spectrum",
+      "18-3-polarization": "polarization"
+    };
+    /**
+     * Scientific calibration stages for each simulator
+     */
+    static calibrationStages = {
+      "18-1-wave": [
+        { maxPct: 25, status: "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E1E\u0E34\u0E01\u0E31\u0E14 3 \u0E21\u0E34\u0E15\u0E34 (\u0E41\u0E01\u0E19 X, Y, Z)..." },
+        { maxPct: 60, status: "\u0E04\u0E33\u0E19\u0E27\u0E13\u0E2A\u0E19\u0E32\u0E21\u0E04\u0E25\u0E37\u0E48\u0E19\u0E44\u0E0B\u0E19\u0E4C E \u27C2 B \u0E15\u0E32\u0E21\u0E2A\u0E21\u0E01\u0E32\u0E23\u0E41\u0E21\u0E01\u0E0B\u0E4C\u0E40\u0E27\u0E25\u0E25\u0E4C..." },
+        { maxPct: 90, status: "\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E17\u0E34\u0E28\u0E17\u0E32\u0E07\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48\u0E04\u0E25\u0E37\u0E48\u0E19 v = c..." },
+        { maxPct: 100, status: "\u0E1B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2A\u0E21\u0E1A\u0E39\u0E23\u0E13\u0E4C! \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E08\u0E33\u0E25\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E48\u0E04\u0E25\u0E37\u0E48\u0E19" }
+      ],
+      "18-2-spectrum": [
+        { maxPct: 25, status: "\u0E08\u0E31\u0E14\u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E0A\u0E48\u0E27\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19\u0E2A\u0E40\u0E1B\u0E01\u0E15\u0E23\u0E31\u0E21 7 \u0E41\u0E16\u0E1A\u0E2A\u0E35 (\u0E2A\u0E2A\u0E27\u0E17.)..." },
+        { maxPct: 60, status: "\u0E1B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E2A\u0E40\u0E01\u0E25\u0E25\u0E2D\u0E01\u0E32\u0E23\u0E34\u0E17\u0E36\u0E21\u0E04\u0E27\u0E32\u0E21\u0E16\u0E35\u0E48 10\xB3 - 10\xB2\xB2 Hz..." },
+        { maxPct: 90, status: "\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E42\u0E22\u0E07\u0E1F\u0E31\u0E07\u0E01\u0E4C\u0E0A\u0E31\u0E19\u0E04\u0E33\u0E19\u0E27\u0E13\u0E1E\u0E25\u0E31\u0E07\u0E07\u0E32\u0E19\u0E42\u0E1F\u0E15\u0E2D\u0E19 E = hf..." },
+        { maxPct: 100, status: "\u0E1B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2A\u0E21\u0E1A\u0E39\u0E23\u0E13\u0E4C! \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E48\u0E27\u0E07\u0E04\u0E25\u0E37\u0E48\u0E19" }
+      ],
+      "18-3-polarization": [
+        { maxPct: 25, status: "\u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E01\u0E33\u0E40\u0E19\u0E34\u0E14\u0E41\u0E2A\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E2A\u0E4C (I\u2080)..." },
+        { maxPct: 60, status: "\u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E41\u0E1C\u0E48\u0E19\u0E42\u0E1E\u0E25\u0E32\u0E44\u0E23\u0E40\u0E0B\u0E2D\u0E23\u0E4C P1 (0\xB0, I\u2081 = 0.5 I\u2080)..." },
+        { maxPct: 90, status: "\u0E1B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E41\u0E1C\u0E48\u0E19\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C P2 \u0E15\u0E32\u0E21\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E21\u0E32\u0E25\u0E38\u0E2A..." },
+        { maxPct: 100, status: "\u0E1B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2A\u0E21\u0E1A\u0E39\u0E23\u0E13\u0E4C! \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E2B\u0E21\u0E38\u0E19\u0E1B\u0E23\u0E31\u0E1A\u0E21\u0E38\u0E21" }
+      ]
+    };
+    /**
+     * Check if a simulator has completed its initial load
+     * @param {string} simId - '18-1-wave' | '18-2-spectrum' | '18-3-polarization'
+     * @returns {boolean}
+     */
+    static isLoaded(simId) {
+      return !!this.loadedState[simId];
+    }
+    /**
+     * Mark a simulator as loaded
+     * @param {string} simId
+     */
+    static markLoaded(simId) {
+      this.loadedState[simId] = true;
+    }
+    /**
+     * Reset loaded state (used for testing or explicit reload)
+     * @param {string} [simId] - Omit to reset all
+     */
+    static reset(simId) {
+      if (simId) {
+        this.loadedState[simId] = false;
+      } else {
+        Object.keys(this.loadedState).forEach((key) => {
+          this.loadedState[key] = false;
+        });
+      }
+    }
+    /**
+     * Get current stage status message based on percentage
+     * @param {string} simId
+     * @param {number} pct - 0 to 100
+     * @returns {string}
+     */
+    static getStatusText(simId, pct) {
+      const stages = this.calibrationStages[simId] || this.calibrationStages["18-1-wave"];
+      const current = stages.find((s) => pct <= s.maxPct);
+      return current ? current.status : stages[stages.length - 1].status;
+    }
+    /**
+     * Start loading progression animation (0% -> 100%)
+     * @param {string} simId - '18-1-wave' | '18-2-spectrum' | '18-3-polarization'
+     * @param {Object} [options]
+     * @param {boolean} [options.force=false] - Force reload even if already loaded
+     * @param {number} [options.duration=700] - Duration in milliseconds
+     * @param {Function} [options.onComplete] - Callback on 100% completion
+     * @param {Function} [options.onProgress] - Callback on each percentage step (pct, status)
+     * @returns {Promise<boolean>}
+     */
+    static load(simId, options = {}) {
+      const {
+        force = false,
+        duration = 700,
+        onComplete = null,
+        onProgress = null
+      } = options;
+      if (this.isLoaded(simId) && !force) {
+        if (typeof onComplete === "function") onComplete();
+        return Promise.resolve(true);
+      }
+      const prefix = this.prefixMap[simId] || simId;
+      return new Promise((resolve) => {
+        const isDOM = typeof document !== "undefined";
+        const elOverlay = isDOM ? document.getElementById(`loader-${prefix}`) : null;
+        const elPct = isDOM ? document.getElementById(`loader-${prefix}-pct`) : null;
+        const elBar = isDOM ? document.getElementById(`loader-${prefix}-bar`) : null;
+        const elStatus = isDOM ? document.getElementById(`loader-${prefix}-status`) : null;
+        if (elOverlay) {
+          elOverlay.classList.remove("opacity-0", "pointer-events-none");
+          elOverlay.style.display = "flex";
+        }
+        const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const updateProgress = (currentTime) => {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(1, Math.max(0, elapsed / duration));
+          const ease = 1 - Math.pow(1 - progress, 3);
+          const currentPct = Math.min(100, Math.round(ease * 100));
+          const statusText = this.getStatusText(simId, currentPct);
+          if (elPct) elPct.textContent = String(currentPct);
+          if (elBar) elBar.style.width = `${currentPct}%`;
+          if (elStatus) elStatus.textContent = statusText;
+          if (typeof onProgress === "function") {
+            onProgress(currentPct, statusText);
+          }
+          if (progress < 1) {
+            if (typeof requestAnimationFrame !== "undefined") {
+              requestAnimationFrame(updateProgress);
+            } else {
+              setTimeout(() => updateProgress(Date.now()), 16);
+            }
+          } else {
+            this.markLoaded(simId);
+            if (elPct) elPct.textContent = "100";
+            if (elBar) elBar.style.width = "100%";
+            if (elStatus) elStatus.textContent = this.getStatusText(simId, 100);
+            if (elOverlay) {
+              setTimeout(() => {
+                elOverlay.classList.add("opacity-0", "pointer-events-none");
+                setTimeout(() => {
+                  if (elOverlay.classList.contains("opacity-0")) {
+                    elOverlay.style.display = "none";
+                  }
+                }, 300);
+              }, 120);
+            }
+            if (typeof onComplete === "function") {
+              onComplete();
+            }
+            resolve(true);
+          }
+        };
+        if (typeof requestAnimationFrame !== "undefined") {
+          requestAnimationFrame(updateProgress);
+        } else {
+          setTimeout(() => updateProgress(Date.now()), 16);
+        }
+      });
+    }
+    /**
+     * Reload simulator with progression animation
+     * @param {string} simId
+     * @param {Function} [onComplete]
+     */
+    static reload(simId, onComplete = null) {
+      return this.load(simId, { force: true, onComplete });
+    }
+    /**
+     * Initialize Global Window Handlers
+     */
+    static initGlobalHandlers() {
+      if (typeof window !== "undefined") {
+        window.SimulatorLoader = _SimulatorLoader;
+        window.reloadSimulator = (simId) => {
+          return _SimulatorLoader.reload(simId);
+        };
+      }
+    }
+  };
 
   // src/adapters/ui/tab-navigator.js
   var TabNavigatorAdapter = class {
@@ -1441,17 +2039,63 @@
      */
     static handleSimulatorLifecycle(tabId) {
       const { emWaveSim, spectrumSim, polarizationSim } = this.simulators;
+      SimulatorLoader.load(tabId, {
+        duration: 650
+      });
       if (tabId === "18-1-wave") {
-        if (emWaveSim) emWaveSim.start();
+        if (emWaveSim) {
+          if (typeof requestAnimationFrame !== "undefined") {
+            requestAnimationFrame(() => {
+              if (emWaveSim.plotter && typeof emWaveSim.plotter.resize === "function") {
+                emWaveSim.plotter.resize();
+              }
+              emWaveSim.start();
+            });
+          } else {
+            emWaveSim.start();
+          }
+        }
       } else {
         if (emWaveSim) emWaveSim.pause();
       }
       if (tabId === "18-2-spectrum") {
-        if (spectrumSim) spectrumSim.render();
+        if (spectrumSim) {
+          if (typeof requestAnimationFrame !== "undefined") {
+            requestAnimationFrame(() => {
+              if (spectrumSim.plotter && typeof spectrumSim.plotter.resize === "function") {
+                spectrumSim.plotter.resize();
+              }
+              spectrumSim.render();
+            });
+          } else {
+            spectrumSim.render();
+          }
+        }
       }
       if (tabId === "18-3-polarization") {
-        if (polarizationSim) polarizationSim.render();
+        if (polarizationSim) {
+          if (typeof requestAnimationFrame !== "undefined") {
+            requestAnimationFrame(() => {
+              if (typeof polarizationSim.resizeAndRender === "function") {
+                polarizationSim.resizeAndRender();
+              } else {
+                polarizationSim.render();
+              }
+            });
+          } else {
+            polarizationSim.render();
+          }
+        }
       }
+    }
+    /**
+     * Force reload simulator with progression animation
+     * @param {string} tabId
+     */
+    static reloadSimulator(tabId) {
+      SimulatorLoader.reload(tabId, () => {
+        this.handleSimulatorLifecycle(tabId);
+      });
     }
     /**
      * Toggle mobile navigation menu
@@ -1479,10 +2123,12 @@
      */
     static init(simulators = {}) {
       this.simulators = simulators;
+      SimulatorLoader.initGlobalHandlers();
       if (typeof window !== "undefined") {
         window.showSection = (sectionId) => this.showSection(sectionId);
         window.switchReviewTab = (tabId) => this.switchReviewTab(tabId);
         window.toggleMobileMenu = () => this.toggleMobileMenu();
+        window.reloadSimulator = (tabId) => this.reloadSimulator(tabId);
       }
       if (this.isExamInProgress) {
         this.showSection("exam-live");
